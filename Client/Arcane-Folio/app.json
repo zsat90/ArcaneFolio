@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "Arcane-Folio",
+    "slug": "Arcane-Folio",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "myapp",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "react-native-auth0",
+        {
+          "domain": "dev-o8a3p0arrx6cpj6w.us.auth0.com",
+          "clientId": "HhpeG1BDNx4mQjuzEbFTlsdQzsDKDiUC"
+        }
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
