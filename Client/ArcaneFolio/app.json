@@ -31,11 +31,7 @@
     "plugins": [
       "expo-router",
       [
-        "react-native-auth0",
-        {
-          "domain": "dev-o8a3p0arrx6cpj6w.us.auth0.com",
-          "clientId": "HhpeG1BDNx4mQjuzEbFTlsdQzsDKDiUC"
-        }
+        
       ]
     ],
     "experiments": {

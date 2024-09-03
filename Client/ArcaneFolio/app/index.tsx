@@ -1,17 +1,12 @@
-import React from 'react';
-import {Stack} from 'expo-router';
-
-
+import React from "react";
+import { PaperProvider } from "react-native-paper";
+import NavBar from "../components/Nav/navBar";
 
 export default function App() {
   return (
-
-    <Stack>
-      <Stack.Screen name="home"/>
-      <Stack.Screen name="login"/>
-    </Stack>
-   
+    <PaperProvider>
+      <NavBar />
+    </PaperProvider>
   );
 }
-
 
