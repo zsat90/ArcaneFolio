@@ -1,5 +1,16 @@
 import validator from 'validator'
 
+export const checkPasswordMatch = (password: string, confirmPassword: string) => {
+    if(!password || !confirmPassword) return 'Password and Confirm Password cannot be empty'
+    if(password !== confirmPassword) return 'Passwords do not match'
+    return '';
+}
+
+export const nameValidator = (name: string) => {
+    if(!name || name.length <= 0) return 'Name cannot be empty'
+    return '';
+}
+
 
 export const emailValidator = (email: string) => {
     if(!email || email.length <= 0) return 'Email cannot be empty';
