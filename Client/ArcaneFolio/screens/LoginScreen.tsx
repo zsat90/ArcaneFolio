@@ -9,6 +9,7 @@ import {
   handlePasswordChange,
 } from "../utils/LoginAuth";
 import globalStyles from "../styles/styles";
+import ImageBackgroundWrapper from "../components/imageBackground";
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState({ value: "", error: "" });
@@ -16,16 +17,13 @@ const LoginScreen = ({ navigation }) => {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
+
+    <ImageBackgroundWrapper>
     
-    <View style={globalStyles.container}>
-      {/* <Text style={styles.title}>Arcane Folio</Text> */}
-      <Text style={styles.loginText}> Login </Text>
-      <Text>
-        Don't have an account?{' '}
-        <Text style={styles.registerText} onPress={() => handleCreateAccount(navigation)}>
-          Register
-        </Text>
-      </Text>
+    <View style={styles.container}>
+     
+      <Text style={globalStyles.title}> Login </Text>
+      
 
       <TextInput
         label="Email"
@@ -42,7 +40,7 @@ const LoginScreen = ({ navigation }) => {
       />
       
       {/* TODO add Forgot Password functionality */} 
-      <Text>Forgot Password?</Text>
+      <Text style={globalStyles.text}>Forgot Password?</Text>
       <View style={styles.buttonContainer}>
         
         <Buttons
@@ -59,17 +57,26 @@ const LoginScreen = ({ navigation }) => {
         >Login
         </Buttons>
       </View>
+
+      <Text style={globalStyles.text}>
+        Don't have an account?{' '}
+        <Text style={styles.registerText} onPress={() => handleCreateAccount(navigation)}>
+          Register
+        </Text>
+      </Text>
     </View>
+    </ImageBackgroundWrapper>
   );
 };
 
 const styles = StyleSheet.create({
-  title: {
-    fontSize: 50,
-    fontWeight: "bold",
-    marginBottom: 150,
+  container: {
+    flex: 1,
+    paddingHorizontal: 10,
+    justifyContent: "flex-start",
+    alignItems: 'center',
   },
-
+  
   loginText: {
     fontSize: 35,
     marginBottom: 20,
@@ -78,12 +85,14 @@ const styles = StyleSheet.create({
   registerText: { 
     fontSize: 18,
     textDecorationLine: 'underline',
+    color: '#231F20',
     
   },
 
   buttonContainer: {
-    width: "80%",
+    width: "90%",
     marginTop: 40,
+    marginBottom: 20,
   },
 });
 

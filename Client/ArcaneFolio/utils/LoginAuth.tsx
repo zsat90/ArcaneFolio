@@ -37,8 +37,8 @@ export const handleLogin = (email: string, password: string, navigation: any, se
         return;
     }
 
-    //Navigate to dashboard using navigation.navigate
-    navigation.navigate('Dashboard')
+    //Navigate to character selection using navigation.navigate
+    navigation.navigate('CharacterSelection') 
 
   }
 

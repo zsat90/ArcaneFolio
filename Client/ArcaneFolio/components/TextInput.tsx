@@ -14,6 +14,8 @@ const TextInput = ({errorText, icon, onIconPress, ...props}: Props) => {
            <Input
             style={styles.input}
             mode='outlined'
+            outlineColor='#231F20'
+            activeOutlineColor='#231F20'
             right={icon ? <Input.Icon icon={icon} onPress={onIconPress} /> : undefined}
             {...props}
            />
@@ -25,14 +27,14 @@ const TextInput = ({errorText, icon, onIconPress, ...props}: Props) => {
 
 const styles = StyleSheet.create({
     container: {
-        marginVertical: 8,
-        width: '80%'
+        marginVertical: 5,
+        width: '95%'
     }, 
 
     input: {
         height: 50,
         width: '100%',
-        fontSize: 16
+        fontSize: 18
 
     },
 

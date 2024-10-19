@@ -9,16 +9,18 @@ import {
   handlePasswordMatch,
 } from "../utils/LoginAuth";
 import globalStyles from "../styles/styles";
+import ImageBackgroundWrapper from "../components/imageBackground";
 
-const CreateAccount = () => {
+const CreateAccount = ({navigation}) => {
   const [name, setName] = useState({ value: "", error: "" });
   const [email, setEmail] = useState({ value: "", error: "" });
   const [password, setPassword] = useState({ value: "", error: "" });
   const [confirmPassword, setConfirmPassword] = useState({ value: "", error: "" });
 
   return (
-    <View style={globalStyles.container}>
-      <Text>Create Account</Text>
+    <ImageBackgroundWrapper>
+    <View style={styles.container}>
+      <Text style={globalStyles.title}>Create Account</Text>
       <TextInput
         label="Name"
         onChangeText={(text) => handleNameChange(text, setName)}
@@ -43,12 +45,39 @@ const CreateAccount = () => {
         }
         errorText={confirmPassword.error}
       />
+     <View style={styles.buttonContainer}>
+        <Buttons mode="contained">Create your account</Buttons>
+      </View>
 
-      <Buttons mode="contained">Create your account</Buttons>
+      <Text style={globalStyles.text}>
+        Already have an account?{' '}
+        <Text style={styles.loginText} onPress={() => navigation.navigate('Login')}>
+          Login
+        </Text>
+        </Text>
     </View>
+    </ImageBackgroundWrapper>
   );
 };
 
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingHorizontal: 10,
+    justifyContent: "flex-start",
+    alignItems: 'center',
+  },
+
+  buttonContainer: {
+    width: "90%",
+    marginTop: 40,
+    marginBottom: 20,
+  },
+  loginText: {
+    fontSize: 18,
+    textDecorationLine: 'underline',
+    color: '#231F20',
+  }
+});
 
 export default CreateAccount;
