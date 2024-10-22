@@ -5,7 +5,7 @@ import { Image, StyleSheet, Text} from 'react-native'
 
 const Logo = () => {
     return (
-        <Text>
+        <Text style={styles.container}>
             <Image source={require('../../assets/images/spellbook.jpg')} style={styles.image} />
         </Text>
     )
@@ -13,10 +13,16 @@ const Logo = () => {
 
 
 const styles = StyleSheet.create({
+    container: {
+       
+        
+        
+    },
     image: {
-        width: 300,
-        height: 300,
-        marginBottom: 200,
+        width: 60,
+        height: 60,
+        
+        
     }
 
 

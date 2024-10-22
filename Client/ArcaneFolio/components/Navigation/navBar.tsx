@@ -24,7 +24,7 @@ const Navbar = () => {
       <Tab.Screen name="Spells" component={SpellScreen} 
       options={{
         tabBarIcon: () => (
-          <Icon name="library-books" color= {'#A9FFF7'} size={25} padding={5} />
+          <Icon name="library-books" color= {'#A9FFF7'} size={25}/>
         ),
       }}/>
       
