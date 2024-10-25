@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "521683196207",
+    "project_id": "arcane-folio",
+    "storage_bucket": "arcane-folio.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:521683196207:android:18167f3fac157c57bae9da",
+        "android_client_info": {
+          "package_name": "arcane.folio"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "521683196207-cnnh31jd4ngomfdqnb1ohka5ep6gg71h.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCJ8vV82SX-5T0zD5HU3u_DmU8dt3BNxHg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "521683196207-cnnh31jd4ngomfdqnb1ohka5ep6gg71h.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "521683196207-uiuvaclg13snm5v5vcvo8dd8l7q35vv8.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "arcane-folio"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

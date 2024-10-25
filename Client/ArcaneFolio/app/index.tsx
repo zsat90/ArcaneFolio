@@ -13,10 +13,12 @@ import CharacterSelectScreen from '../screens/CharacterSelectScreen'
 
 
 
+
 const Stack = createStackNavigator()
 
 
 export default function App() {
+
   return (
     <PaperProvider>
       <NavigationContainer independent={true}>

@@ -1,4 +1,5 @@
 import {emailValidator, passwordValidator, nameValidator, checkPasswordMatch} from './validator'
+import {login} from './auth/authService'
 
 // Handle password and confirm password
 export const handlePasswordMatch = (password: string, confirmPassword: string, setConfirmPassword: any) => {
@@ -27,7 +28,7 @@ export const handlePasswordChange = (text: string, setPassword: any) => {
 
 
 // Handle login press(send request to backend, check errors, handle action)
-export const handleLogin = (email: string, password: string, navigation: any, setEmail: any, setPassword: any) => {
+export const handleLogin = async (email: string, password: string, navigation: any, setEmail: any, setPassword: any) => {
     const emailError = emailValidator(email)
     const passwordError = passwordValidator(password)
 
@@ -37,8 +38,14 @@ export const handleLogin = (email: string, password: string, navigation: any, se
         return;
     }
 
-    //Navigate to character selection using navigation.navigate
-    navigation.navigate('CharacterSelection') 
+    //call login auth from firebase and navigate to character selection
+    try{
+      await login(email, password)
+      navigation.navigate('CharacterSelection')
+    } catch (error) { 
+      console.error(error)
+    }
+    
 
   }
 
