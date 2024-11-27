@@ -8,7 +8,7 @@ export class UsersService {
 
     async findByEmail(email: string) {
         try{
-            return await this.prisma.user.findUnique({where: {email}});
+            return await this.prisma.user.findUnique({where: {email: email.toLowerCase()}});
         }catch(err){
             throw new InternalServerErrorException(err);
         }
@@ -20,6 +20,15 @@ export class UsersService {
 
         }catch(err){
             throw new InternalServerErrorException(err);
+        }
+    }
+
+    async findUser(id: number){
+        try{
+            return await this.prisma.user.findUnique({where: {id}})
+
+        }catch(err){
+            throw new InternalServerErrorException(err)
         }
     }
 

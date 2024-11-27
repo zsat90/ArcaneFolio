@@ -1,18 +1,33 @@
-import React, { useState } from "react";
-import { Text, View, StyleSheet, ScrollView } from "react-native";
-import { Picker } from "@react-native-picker/picker";
+import React, { useEffect, useState } from "react";
+import { Text, View, StyleSheet, FlatList } from "react-native";
 import ImageBackgroundWrapper from "../../components/imageBackground";
-import { Searchbar, SegmentedButtons } from "react-native-paper";
+import { Searchbar } from "react-native-paper";
 import {Dropdown} from 'react-native-element-dropdown'
-import Icon from "react-native-vector-icons/MaterialIcons";
+import {fetchAllSpells} from '../../utils/Spells/spellsService'
+import SpellItem from '../../components/Spells/spellItems'
+
 
 const SpellsScreen: React.FC<any> = () => {
   // Todo Set the state to use the spells type instead of <any>
   const [spells, setSpells] = useState<any[]>([]);
   const [spellSearch, setSpellSearch] = useState<string>("");
   const [selectedLevel, setSelectedLevel] = useState("All");
+  const [selectedSpell, setSelectedSpell] = useState('')
 
-  // TODO: Add filtered spell function that handles the filtering of levels. Best to put it in it's own file
+  useEffect(() => {
+    const fetchSpells = async () => {
+      try{
+        const spellData = await fetchAllSpells()
+        setSpells(spellData)
+
+      }catch(err){
+        console.error(err)
+      }
+    }
+
+    fetchSpells()
+    
+  }, [])
 
   // level array
   const levels = [
@@ -55,7 +70,24 @@ const SpellsScreen: React.FC<any> = () => {
           
         </View>
 
-        {/* TODO: Use flatlist for spells*/}
+        <View>
+          <FlatList
+          
+           data={spells}
+          contentContainerStyle={styles.listContainer}
+           renderItem={({item}) => (
+            <SpellItem 
+              item={item}
+              addSpellToSpellbook={setSelectedSpell}
+              
+            />
+           )}
+           
+           />
+
+           
+          
+        </View>
       </View>
     </ImageBackgroundWrapper>
   );
@@ -87,5 +119,9 @@ const styles = StyleSheet.create({
     height: 55,
     backgroundColor: '#F1F1F1'
   },
+
+  listContainer: {
+    paddingBottom: 70
+  }
 });
 export default SpellsScreen;

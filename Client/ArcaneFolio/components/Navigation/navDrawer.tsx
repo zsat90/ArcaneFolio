@@ -1,8 +1,8 @@
 import React from "react";
 import { View, Text, StyleSheet } from 'react-native';
 import {createDrawerNavigator, DrawerContentScrollView, DrawerItem, DrawerItemList} from '@react-navigation/drawer';
-import CharacterSelectScreen from '../../screens/CharacterSelectScreen';
-import LoginScreen from '../../screens/LoginScreen';
+import CharacterSelectScreen from '../../screens/Characters/CharacterSelectScreen';
+import LoginScreen from '../../screens/Login_CreateAccount/LoginScreen';
 import Header from '../Header' 
 import NavBar from './navBar';
 import Icon from 'react-native-vector-icons/MaterialIcons';

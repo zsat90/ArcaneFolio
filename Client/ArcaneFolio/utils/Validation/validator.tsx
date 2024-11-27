@@ -19,6 +19,11 @@ export const emailValidator = (email: string) => {
     return '';
 }
 
+export const inputValidator = (value: number) => {
+    if(!value || value <= 0) return 'Input cannot be empty';
+    return ''
+}
+
 export const passwordValidator = (password: string) => {
     const validationRules = [
         { 

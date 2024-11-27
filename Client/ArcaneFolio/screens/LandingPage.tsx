@@ -1,7 +1,7 @@
 import React from "react";
 import { View, StyleSheet, Text } from "react-native";
 import Buttons from "../components/Login/Button";
-import { loginPress, handleCreateAccount } from "../utils/LoginAuth";
+import { loginPress, handleCreateAccount } from "../utils/Login/LoginAuth";
 import globalStyles from "../styles/styles";
 import ImageBackgroundWrapper from "@/components/imageBackground";
 

@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Spell" ALTER COLUMN "range" SET DATA TYPE TEXT;

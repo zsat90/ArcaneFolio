@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "myapp",
-    "entryPoint": "./app/index.tsx", 
+    "entryPoint": "./app/index.tsx",
     "userInterfaceStyle": "automatic",
     "splash": {
       "resizeMode": "contain",
@@ -29,7 +29,8 @@
       }
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true

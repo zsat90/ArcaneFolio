@@ -17,7 +17,9 @@ const Buttons = ({mode, icon, children, ...props}: Props) => {
 
 const styles = StyleSheet.create({
     button: {
+        width: '100%',
         backgroundColor: '#4A6FA5',
+        
         
     }
 

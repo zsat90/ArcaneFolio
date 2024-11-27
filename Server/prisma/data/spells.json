@@ -1,0 +1,94 @@
+[
+    {
+      "name": "Affect Normal Fires",
+      "level": 1,
+      "components": ["V", "S", "M"],
+      "range": "5 yds./level",
+      "areaOfEffect": "10-ft. radius",
+      "save": "None",
+      "castingTime": 1,
+      "duration": "2 rds./level",
+      "description": "This spell enables the wizard to cause nonmagical fires--from as small as a torch or lantern to as large as the area of effect--to reduce in size and brightness to become mere coals or increase in light to become as bright as full daylight and increase the illumination to double the normal radius. Note that this does not affect either fuel consumption or damage caused by the fire. The caster can affect any or all fires in the spell's area. He can alter their intensities with a single gesture as long as the spell is in effect. The spell lasts until the caster cancels it, all fuel is burned, or the duration expires. The caster can also extinguish all flames in the area, which expends the spell immediately. The spell does not affect fire elementals or similar creatures.",
+      "magicPointCost": 1,
+      "characterClass": "Wizard"
+    },
+    {
+      "name": "Alarm",
+      "level": 1,
+      "components": ["V", "S", "M"],
+      "range": "10 yds.",
+      "areaOfEffect": "Up to 20-ft. cube",
+      "save": "None",
+      "castingTime": 1,
+      "duration": "4 hrs. + 1 hr./level",
+      "description": "When an alarm spell is cast, the wizard causes a selected area to react to the presence of any creature larger than a normal rat--anything larger than about 1 cubic foot in volume or more than about three pounds in weight. The area of effect can be a portal, a section of floor, stairs, etc. As soon as any creature enters the warded area, touches it, or otherwise contacts it without speaking a password established by the caster, the alarm spell lets out a loud ringing that can be heard clearly within a 60-foot radius. (Reduce the radius by 10 feet for each interposing door and by 20 feet for each substantial interposing wall.) The sound lasts for one round and then ceases. Ethereal or astrally projected creatures do not trigger an alarm, but flying or levitating creatures, invisible creatures, or incorporeal or gaseous creatures do. The caster can dismiss the alarm with a single word. The material components of this spell are a tiny bell and a piece of very fine silver wire.",
+      "magicPointCost": 1,
+      "characterClass": "Wizard"
+    },
+    {
+      "name": "Armor",
+      "level": 1,
+      "components": ["V", "S", "M"],
+      "range": "Touch",
+      "areaOfEffect": "1 creature",
+      "save": "None",
+      "castingTime": 1,
+      "duration": "Special",
+      "description": "By means of this spell, the wizard creates a magical field of force that serves as if it were scale mail armor (AC 6). The spell has no effect on a person already armored or a creature with Armor Class 6 or better. It is not cumulative with the shield spell, but it is cumulative with Dexterity and, in case of fighter/mages, with the shield bonus. The armor spell does not hinder movement or prevent spellcasting, and adds no weight or encumbrance. It lasts until successfully dispelled or until the wearer sustains cumulative damage totaling greater than 8 points + 1 per level of the caster. (It is important to note that the armor does not absorb this damage. The armor merely grants an AC of 6; the wearer still suffers full damage from any successful attacks.) Thus, the wearer might suffer 8 points from an attack, then several minutes later sustain an additional 1 point of damage. Unless the spell were cast by a wizard of 2nd level or higher, it would be dispelled at this time. Until it is dispelled, the armor spell grants the wearer full benefits of the Armor Class gained. The material component is a piece of finely cured leather that has been blessed by a priest.",
+      "magicPointCost": 1,
+      "characterClass": "Wizard"
+    },
+    {
+      "name": "Audible Glamer",
+      "level": 1,
+      "components": ["V", "S", "M"],
+      "range": "60 yds. + 10 yds./level",
+      "areaOfEffect": "Hearing range",
+      "save": "Special",
+      "castingTime": 1,
+      "duration": "3 rds./level",
+      "description": "When the audible glamer spell is cast, the wizard causes a volume of sound to arise, at whatever distance he desires (within range), and seem to recede, approach, or remain at a fixed place as desired. The volume of sound created, however, is directly related to the level of the spellcaster. The volume is based upon the lowest level at which the spell can be cast, 1st level. The noise of the audible glamer at this level is that of four men, maximum. Each additional experience level of the wizard adds a like volume, so that at 2nd level the wizard can have the spell cause sound equal to that of eight men. Thus, talking, singing, shouting, walking, marching, or running sounds can be created. The auditory illusion created by an audible glamer spell can be virtually any type of sound, but the relative volume must be commensurate with the level of the wizard casting the spell. A horde of rats running and squeaking is about the same volume as eight men running and shouting. A roaring lion is equal to the noise volume of 16 men, while a roaring dragon is equal to the noise volume of no fewer than 24 men. A character stating that he does not believe the sound receives a saving throw, and if it succeeds, the character then hears a faint and obviously false sound, emanating from the caster's direction. Note that this spell can enhance the effectiveness of the phantasmal force spell. The material component of the spell is a bit of wool or a small lump of wax.",
+      "magicPointCost": 1,
+      "characterClass": "Wizard"
+    },
+    {
+      "name": "Burning Hands",
+      "level": 1,
+      "components": ["V", "S"],
+      "range": "0",
+      "areaOfEffect": "The caster",
+      "save": "_",
+      "castingTime": 1,
+      "duration": "Instantaneous",
+      "description": "When the wizard casts this spell, a jet of searing flame shoots from his fingertips. His hands must be held so as to send forth a fanlike sheet of flames: The wizard's thumbs must touch each other and the fingers must be spread. The burning hands send out flame jets 5 feet long in a horizontal arc of about 120 degrees in front of the wizard. Any creature in the area of the flames suffers 1d3 points of damage, plus 2 points for each level of experience of the spellcaster, to a maximum of 1d3+20 points of fire damage. Those successfully saving vs. spell receive half damage. Flammable materials touched by the fire burn (for example, cloth, paper, parchment, thin wood, etc.). Such materials can be extinguished in the next round if no other action is taken.",
+      "magicPointCost": 1,
+      "characterClass": "Wizard"
+    },
+    {
+      "name": "Cantrip",
+      "level": 1,
+      "components": ["V", "S"],
+      "range": "10 ft.",
+      "areaOfEffect": "Special",
+      "save": "None",
+      "castingTime": 1,
+      "duration": "1 hr./level",
+      "description": "Cantrips are minor spells studied by wizards during their apprenticeship, regardless of school. The cantrip spell is a practice method for the apprentice, teaching him how to tap minute amounts of magical energy. Once cast, the cantrip spell enables the caster to create minor magical effects for the duration of the spell. However, these effects are so minor that they have severe limitations. They are completely unable to cause a loss of hit points, cannot affect the concentration of spellcasters, and can only create small, obviously magical materials. Furthermore, materials created by a cantrip are extremely fragile and cannot be used as tools of any sort. Lastly, a cantrip lacks the power to duplicate any other spell effects. Whatever manifestation the cantrip takes, it remains in effect only as long as the wizard concentrates. Wizards typically use cantrips to impress common folk, amuse children, and brighten dreary lives. Common tricks with cantrips include tinklings of ethereal music, brightening faded flowers, glowing balls that float over the caster's hand, puffs of wind to flicker candles, spicing up aromas and flavors of bland food, and little whirlwinds to sweep dust under rugs. Combined with the unseen servant spell, it's a tool to make housekeeping and entertaining simpler for the wizard.",
+      "magicPointCost": 1,
+      "characterClass": "Wizard"
+    },
+    {
+      "name": "Change Self",
+      "level": 1,
+      "components": ["V", "S"],
+      "range": "0",
+      "areaOfEffect": "The caster",
+      "save": "None",
+      "castingTime": 1,
+      "duration": "1 hr./level",
+      "description": "The caster of the change self spell alters his physical appearance so that he looks like someone else. The transformation is superficial, though, and does not change the wizard's actual size, weight, voice, or anything else that requires magical alteration. The wizard can change only his facial features, hair, and general physical appearance (including skin color, height, and build). He cannot alter his voice or any other sounds he makes. The change is magical in nature, so creatures who possess the ability to see magical disguises (such as some magical creatures) might detect that the transformation is illusionary. The spell ends after the caster speaks or does something to reveal his true identity, at which time the disguise fails. This spell does not affect any magical items the wizard might be carrying. The material components of this spell are a piece of perfumed soap and a small, clear glass.",
+      "magicPointCost": 1,
+      "characterClass": "Wizard"
+    }
+  ]
+  

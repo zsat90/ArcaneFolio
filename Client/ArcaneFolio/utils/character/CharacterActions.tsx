@@ -1,4 +1,5 @@
-import { Character } from "@/types/characterTypes";
+import React from 'react'
+import { Character } from "../../types/characterTypes";
 
 // handle character selection and navigation
 export const handleCharacterSelect = (

@@ -19,7 +19,46 @@ model User {
   email     String   @unique   
   password  String   
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt 
+  updatedAt DateTime @updatedAt
+  characters Character[]
 
+}
+
+model Character {
+  id                 Int         @id @default(autoincrement())
+  name               String
+  characterClass     String
+  level              Int
+  magicPoints        Int
+  userId             Int
+  createdAt          DateTime    @default(now())
+  user               User        @relation(fields: [userId], references: [id])
+  spellbookId        Int         @unique
+  spellbook          Spellbook   @relation(fields: [spellbookId], references: [id])
+  
+}
+
+model Spell {
+  id                 Int @id @default(autoincrement())
+  characterClass     String
+  name               String
+  level              Int
+  components         String[]
+  range              String
+  areaOfEffect       String
+  save               String
+  castingTime        Int
+  magicPointCost     Int
+  duration           String
+  description        String
+  spellbookId        Int?
+  spellbook          Spellbook? @relation(fields: [spellbookId], references: [id])
+
+}
+
+model Spellbook {
+  id         Int        @id @default(autoincrement())
+  character  Character? @relation  
+  spells     Spell[]
 }
 

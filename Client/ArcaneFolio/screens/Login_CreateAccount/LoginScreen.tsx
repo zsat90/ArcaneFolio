@@ -1,20 +1,21 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
-import TextInput from "../components/TextInput";
-import Buttons from "../components/Login/Button";
+import TextInput from "../../components/TextInput";
+import Buttons from "../../components/Login/Button";
 import {
   handleLogin,
   handleCreateAccount,
-  handleEmailChange,
-  handlePasswordChange,
-} from "../utils/LoginAuth";
-import globalStyles from "../styles/styles";
-import ImageBackgroundWrapper from "../components/imageBackground";
+} from "../../utils/Login/LoginAuth";
+import {handleEmailChange,
+  handlePasswordChange,} from '../../utils/Validation/userInputs'
+import globalStyles from "../../styles/styles";
+import ImageBackgroundWrapper from "../../components/imageBackground";
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState({ value: "", error: "" });
   const [password, setPassword] = useState({ value: "", error: "" });
   const [showPassword, setShowPassword] = useState(false);
+  const [token, setToken] = useState('')
 
   return (
 
@@ -46,14 +47,17 @@ const LoginScreen = ({ navigation }) => {
         <Buttons
           mode="contained"
           onPress={() =>
-            handleLogin(
-              email.value,
-              password.value,
+            handleLogin({
+              email: email.value,
+              password: password.value,
               navigation,
               setEmail,
-              setPassword
-            )
+              setPassword,
+              setToken
+          })
           }
+          
+          labelStyle={{fontSize: 18}}
         >Login
         </Buttons>
       </View>

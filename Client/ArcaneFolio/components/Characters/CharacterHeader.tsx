@@ -16,7 +16,7 @@ const CharacterHeader: React.FC<HeaderWithCharacterProps> = ({characterName}) =>
 const styles = StyleSheet.create({ 
     headerContainer: {
         padding: 10,
-        backgroundColor: '#6200ee',
+        backgroundColor: '#231F20',
       },
       headerText: {
         fontSize: 20,
