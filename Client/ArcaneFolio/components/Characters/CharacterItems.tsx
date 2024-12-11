@@ -1,4 +1,4 @@
-import React from "react";
+import React, {useEffect} from "react";
 import { View, StyleSheet, Text, Button } from "react-native";
 import { Character } from "@/types/characterTypes";
 
@@ -14,6 +14,11 @@ interface CharacterItemProps {
 }
 
 const CharacterItem: React.FC<CharacterItemProps> = ({ item, navigation, handleCharacterSelect, setSelectedCharacter }) => {
+
+  const handleSelectWithMagicPoints = async () => {
+    handleCharacterSelect(item, navigation, setSelectedCharacter); 
+  };
+
   return (
     
     <View style={styles.characterItem}>
@@ -22,11 +27,7 @@ const CharacterItem: React.FC<CharacterItemProps> = ({ item, navigation, handleC
         <Text style={styles.characterClass}>Class: {item.characterClass}</Text>
         <Text style={styles.characterLevel}>Level: {item.level}</Text>
       </View>
-      <Button title="Select" onPress={() => {
-        
-        handleCharacterSelect(item, navigation, setSelectedCharacter)
-        
-      }} />
+      <Button title="Select" onPress={handleSelectWithMagicPoints} />
     </View>
     
   );

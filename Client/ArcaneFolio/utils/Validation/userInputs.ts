@@ -35,3 +35,15 @@ export const handleNameChange = (text: string, setName: any) => {
     });
   };
 
+  export const handleAddMagicPoints = (input: string, setMagicPoints: any) => {
+      const inputNumber = Number(input)
+      let error = ''
+
+      if (isNaN(inputNumber)) {
+        error = "Please enter a valid number.";
+      } else {
+        error = inputValidator(inputNumber);
+      }
+      setMagicPoints({value: isNaN(inputNumber) ? "" : inputNumber, error: error})
+  }
+

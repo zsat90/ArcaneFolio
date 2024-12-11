@@ -27,6 +27,12 @@ const SpellItem = ({ item, addSpellToSpellbook }) => {
         const spellId = item.id
 
         try{
+
+          if (item.characterClass !== selectedCharacter.characterClass) {
+            Alert.alert("Spell not added, check Character class");
+            return;
+          }
+
           const response = await addSpellsToSpellbook(spellbookId, spellId)
 
           if(response.success){
@@ -108,6 +114,7 @@ export const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.5,
     alignItems: "center",
+    height: 80
   },
 
   textContainer: {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Text } from 'react-native';
-import { TextInput as Input, IconButton } from 'react-native-paper';
+import { TextInput as Input } from 'react-native-paper';
 
 type Props = React.ComponentProps<typeof Input> & {
     errorText?: string;

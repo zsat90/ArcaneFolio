@@ -21,6 +21,10 @@ export const emailValidator = (email: string) => {
 
 export const inputValidator = (value: number) => {
     if(!value || value <= 0) return 'Input cannot be empty';
+    if(isNaN(Number(value))) return 'Input must be a number';
+
+    const numeric = Number(value)
+    if(numeric <= 0) return 'Input must be greater than 0'
     return ''
 }
 

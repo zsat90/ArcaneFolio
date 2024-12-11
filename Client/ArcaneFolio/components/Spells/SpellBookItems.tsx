@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useNavigation } from "@react-navigation/native";
@@ -10,9 +10,10 @@ import Reanimated, {
   SharedValue,
   useAnimatedStyle,
 } from "react-native-reanimated";
+import {castSpell} from '../../utils/Spells/spellBookActions'
 
 const SpellbookItem = ({ item }) => {
-  const { selectedCharacter } = useCharacterContext();
+  const { selectedCharacter, setSelectedCharacter } = useCharacterContext();
   const { spellbook, setSpellbook } = useSpellbook();
   const swipeableRef = useRef(null);
 
@@ -56,14 +57,37 @@ const SpellbookItem = ({ item }) => {
   ) => {
     const animatedStyle = useAnimatedStyle(() => {
       return {
-        transform: [{ translateX: drag.value + 60 }],
+        transform: [{ translateX: drag.value + 140 }],
       };
     });
     return (
       <Reanimated.View style={[animatedStyle, styles.rightActionContainer]}>
+        <Reanimated.View style={styles.iconButton1}>
+        <Text style={styles.actionText} onPress={async () => {
+          try{
+            const updatedMP = await castSpell(item, selectedCharacter.magicPoints)
+            if(swipeableRef.current){
+              swipeableRef.current.close();
+            }
+            
+            setSelectedCharacter(prev => ({
+              ...prev,
+              magicPoints: updatedMP
+            }));
+
+
+          }catch(err){
+            console.error(err)
+          }
+        }}>
+          <Icon name='electric-bolt' size={30}/>
+        </Text>
+        </Reanimated.View>
+        <Reanimated.View style={styles.iconButton2}>
         <Text style={styles.actionText} onPress={handleRemoveSpell}>
           <Icon name='delete' size={30}/>
         </Text>
+        </Reanimated.View>
       </Reanimated.View>
     );
   };
@@ -104,6 +128,7 @@ export const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.5,
     alignItems: "center",
+    height: 80
   },
 
   textContainer: {
@@ -119,14 +144,29 @@ export const styles = StyleSheet.create({
   },
 
   rightActionContainer: {
-    justifyContent: "center",
+    justifyContent: 'center',
     alignItems: "center",
-    backgroundColor: "#e0040c",
-    marginTop: 10,
+    flexDirection: 'row',
+  },
+
+  iconButton1: {
+    backgroundColor: 'green',
     height: 80,
-    width: 60,
+    width: 70,
+    borderTopLeftRadius: 5,
+    borderBottomLeftRadius: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    
+  },
+  iconButton2: {
+    backgroundColor: '#e0040c',
+    height: 80,
+    width: 70,
     borderTopRightRadius: 10,
     borderBottomRightRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   actionText: {
     color: "white",

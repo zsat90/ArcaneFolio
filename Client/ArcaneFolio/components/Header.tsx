@@ -4,11 +4,13 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import Logo from '../components/Login/Logo'
 
+
 type HeaderProps = {
     navigation: DrawerNavigationProp<any>; 
 }
 
 const Header: React.FC<HeaderProps> = ({ navigation }) => {
+
     return (
         <View style={styles.headerContainer}>
             <TouchableOpacity onPress={() => navigation.toggleDrawer()}>

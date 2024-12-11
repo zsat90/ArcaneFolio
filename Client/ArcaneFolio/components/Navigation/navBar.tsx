@@ -30,8 +30,17 @@ const Navbar = () => {
       />
 
       <Tab.Screen
-        name="Spells"
-        component={SpellScreen}
+      name="Wizard Spells"
+      children={() => <SpellScreen characterClass='Wizard'/>}
+      options={{
+        tabBarIcon: () => (
+          <Icon name="library-books" color={"#A9FFF7"} size={25} />
+        ),
+      }}
+      />
+      <Tab.Screen
+        name="Priest Spells"
+        children={() => <SpellScreen characterClass='Cleric'/>}
         options={{
           tabBarIcon: () => (
             <Icon name="library-books" color={"#A9FFF7"} size={25} />

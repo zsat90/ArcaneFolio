@@ -3,6 +3,27 @@ import API_ENDPOINTS from '../apiConfig'
 
 
 
+
+export const filterSpells = async (characterClass: string, level?: string, search?: string, spellbookId?: number) => {
+    
+    try{
+        const endpoint = API_ENDPOINTS.FILTER.replace(':characterClass', characterClass)
+        const URL = `${endpoint}?level=${level || '0'}${search ? `&search=${search}` : ''}${spellbookId ? `&spellbookId=${spellbookId}` : ''}`
+
+        const response = await axiosInstance.get(URL)
+       
+
+        if(!response || !response.data) throw new Error('Failed to filter spells')
+
+        return await response.data
+
+    }catch(err){
+        throw new Error(err)
+    }
+}
+
+
+
 export const fetchAllSpells = async () => {
     try{
         const response = await axiosInstance.get(API_ENDPOINTS.SPELLS)
@@ -12,7 +33,7 @@ export const fetchAllSpells = async () => {
         return await response.data
 
     }catch(err){
-        throw new Error(err)
+        throw new Error('Fetch All Spells error: ',err)
     }
 }
 
@@ -66,3 +87,15 @@ export const fetchSpellbook = async(spellbookId: number) => {
         console.error('Error', err)
     }
 }
+
+export const getSpellsByClass = async(characterClass: string) => {
+    try{
+        const response = await axiosInstance.get(`${API_ENDPOINTS.SPELLS}/${characterClass}`)
+        if(!response) throw new Error('Failed to get spells')
+        return response.data
+
+    }catch(err){
+        console.error(err)
+    }
+}
+

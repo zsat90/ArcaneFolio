@@ -31,4 +31,23 @@ export class CharactersController {
         return this.characterService.updateCharacter(characterId, updateData)
     }
 
+    @UseGuards(JwtAuthGuard)
+    @Put(':id/add')
+    async addMagicPoints(
+        @Param('id', ParseIntPipe) characterId: number,
+        @Body() body: {magicPoints: number}
+    ) {
+        const {magicPoints} = body
+        return this.characterService.addMagicPoints(characterId, magicPoints)
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Put(':id/reset')
+    async resetMagicPoints(
+        @Param('id', ParseIntPipe) characterId: number,
+    ) {
+
+        return this.characterService.resetMagicPoints(characterId)
+    }
+
 }

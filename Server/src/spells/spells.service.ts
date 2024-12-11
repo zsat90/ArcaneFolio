@@ -1,101 +1,153 @@
-import { Injectable, InternalServerErrorException} from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { FilterSpellsDto } from './dto/spells.dto';
+
 
 @Injectable()
 export class SpellsService {
-    constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-    //TODO: Add a method to search and filter based on level and search query
+  async filterSpells(characterClass: string, filterSpellsDto: FilterSpellsDto) {
+    try {
+      const {level, search, spellbookId} = filterSpellsDto
 
-    async removeSpellFromSpellbook(spellbookId: number, spellId: number) {
-        try{
-          return await this.prisma.spell.update({
-            where: {spellbookId: spellbookId, id: spellId},
-            data: {
-              spellbookId: null,
-            },
-            
-          })
-        }catch(err){
-          throw new InternalServerErrorException(err)
+      const where: any = {}
 
-        }
-    }
+      if(spellbookId){
+        where.spellbookId = spellbookId
+      }
 
+      if(level){
+        where.level = level
+      }
 
-    async getSpellsForSpellbook(spellbookId: number) {
-        try {
-          return await this.prisma.spellbook.findUnique({
-            where: {
-              id: spellbookId,
-            },
-            include: {
-              spells: {
-                orderBy: {
-                  name: 'asc',
-                },
-              },
-            },
-          });
-        } catch (err) {
-          throw new InternalServerErrorException(err);
+      if(search){
+        where.name = {
+          contains: search,
+          mode: 'insensitive'
         }
       }
 
-    async getAllSpells(){
-        try{
-            return await this.prisma.spell.findMany({
-                orderBy: {
-                    name: 'asc',
-                    
-                }
-            })
+      if(characterClass){
+        where.characterClass = characterClass
+      }
+      
+      return this.prisma.spell.findMany({
+        orderBy: {
+          name: 'asc'
+        },
+        where,
+      })
+    } catch (err) {
+      throw new InternalServerErrorException(err);
+    }
+  }
 
-        }catch(err){
-            throw new InternalServerErrorException(err)
-        }
+  async removeSpellFromSpellbook(spellbookId: number, spellId: number) {
+    try {
+      return await this.prisma.spell.update({
+        where: { spellbookId: spellbookId, id: spellId },
+        data: {
+          spellbookId: null,
+        },
+      });
+    } catch (err) {
+      throw new InternalServerErrorException(err);
+    }
+  }
 
+  async getSpellsForSpellbook(spellbookId: number) {
+    try {
+      return await this.prisma.spellbook.findUnique({
+        where: {
+          id: spellbookId,
+        },
+        include: {
+          spells: {
+            orderBy: {
+              name: 'asc',
+            },
+          },
+        },
+      });
+    } catch (err) {
+      throw new InternalServerErrorException(err);
+    }
+  }
+
+  async getAllSpells() {
+    try {
+      return await this.prisma.spell.findMany({
+        orderBy: [
+        {
+          name: 'asc',
+        },
+        {
+          level: 'asc',
+        },
+      ]
+      });
+    } catch (err) {
+      throw new InternalServerErrorException(err);
+    }
+  }
+
+  async getSpellsByClass(characterClass: string){
+    try{
+      return await this.prisma.spell.findMany({
+        where: {
+          characterClass: characterClass
+        },
+        orderBy: [
+          {
+            name: 'asc',
+          },
+          {
+            level: 'asc',
+          },
+        ]
+
+      })
+
+    }catch(err){
+      throw new InternalServerErrorException(err)
     }
 
+  }
 
-    async addSpellToSpellbook(spellbookId: number, spellId: number){
-        
-        try{
-        
-            const spellbook = await this.prisma.spellbook.findUnique({
-                where: {id: spellbookId},
-                include: {spells: true}
-            })
+  async addSpellToSpellbook(spellbookId: number, spellId: number) {
+    try {
+      const spellbook = await this.prisma.spellbook.findUnique({
+        where: { id: spellbookId },
+        include: { spells: true },
+      });
 
-            if(!spellbook){
-                throw new Error('Spellbook not found')
-            }
+      if (!spellbook) {
+        throw new Error('Spellbook not found');
+      }
 
-            const existingSpell = spellbook.spells.find(spell => spell.id === spellId)
+      const existingSpell = spellbook.spells.find(
+        (spell) => spell.id === spellId,
+      );
 
-            if(existingSpell){
-                return { success: false, message: "Spell already exists in the spellbook" };
-            }
+      if (existingSpell) {
+        return {
+          success: false,
+          message: 'Spell already exists in the spellbook',
+        };
+      }
 
-            const updatedSpellbook = await this.prisma.spellbook.update({
-                where: {id: spellbookId},
-                data: {
-                   spells: { connect: {id: spellId} }
-                },
-                include: {spells: true}
-            })
+      const updatedSpellbook = await this.prisma.spellbook.update({
+        where: { id: spellbookId },
+        data: {
+          spells: { connect: { id: spellId } },
+        },
+        include: { spells: true },
+      });
 
-            return {success: true, updatedSpellbook: updatedSpellbook.spells}
-            
-
-        }catch(err){
-            throw new InternalServerErrorException(err)
-        }
+      return { success: true, updatedSpellbook: updatedSpellbook.spells };
+    } catch (err) {
+      throw new InternalServerErrorException(err);
     }
-
-
-
-
-
-
+  }
 }

@@ -1,17 +1,18 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { View, Text, FlatList, StyleSheet } from "react-native";
 import { Dropdown } from "react-native-element-dropdown";
 import { Searchbar } from "react-native-paper";
 import ImageBackgroundWrapper from "../../components/imageBackground";
-import { useSpellbook } from "../../components/Spells/SpellContext";
 import SpellbookItem from "../../components/Spells/SpellBookItems";
-import { fetchSpellbook } from "@/utils/Spells/spellsService";
+import { fetchSpellbook, filterSpells } from "@/utils/Spells/spellsService";
 import { useCharacterContext } from "../../components/Characters/CharacterContext";
+import debounce from "lodash/debounce";
+import { useSpellbook } from "@/components/Spells/SpellContext";
 
 const SpellbookScreen = () => {
   // level array
   const levels = [
-    { label: "All Levels", value: "All" },
+    { label: "All Levels", value: "0" },
     { label: "1st", value: "1" },
     { label: "2nd", value: "2" },
     { label: "3rd", value: "3" },
@@ -24,15 +25,20 @@ const SpellbookScreen = () => {
   ];
 
   const [spellSearch, setSpellSearch] = useState<string>("");
-  const [selectedLevel, setSelectedLevel] = useState("All");
+  const [filteredSpells, setFilteredSpells] = useState([]);
+  const [search, setSearch] = useState("");
+  const [selectedLevel, setSelectedLevel] = useState("0");
   const { selectedCharacter } = useCharacterContext();
-  const { spellbook, setSpellbook } = useSpellbook();
+  const {spellbook} = useSpellbook()
+
+  const characterClass = selectedCharacter.characterClass
 
   useEffect(() => {
     const fetchSpellbookData = async () => {
       try {
         const data = await fetchSpellbook(selectedCharacter.spellbookId);
-        setSpellbook(data);
+        setFilteredSpells(data.spells);
+        
       } catch (err) {
         throw err;
       }
@@ -40,19 +46,35 @@ const SpellbookScreen = () => {
     if (selectedCharacter?.spellbookId) {
       fetchSpellbookData();
     }
-  }, [selectedCharacter?.spellbookId]);
+  }, [selectedCharacter.spellbookId, spellbook]);
 
-  if (!spellbook || !spellbook.spells || spellbook.spells.length === 0) {
-    return (
-      <ImageBackgroundWrapper>
-        <View style={styles.container}>
-          <Text style={styles.text}>
-            No spells added to spellbook. Please add spells
-          </Text>
-        </View>
-      </ImageBackgroundWrapper>
-    );
-  }
+  const debounceSpells = useMemo(
+    () =>
+      debounce(async (level: string, text: string) => {
+        try {
+          const filtered = await filterSpells(
+            characterClass,
+            level,
+            text,
+            selectedCharacter.spellbookId
+          );
+          setFilteredSpells(filtered);
+        } catch (err) {
+          console.error(err);
+        }
+      }, 500),
+    []
+  );
+
+  const handleSearch = async (text: string) => {
+    setSpellSearch(text);
+    debounceSpells(selectedLevel, text);
+  };
+
+  const handleLevelChange = async (item: any) => {
+    setSelectedLevel(item.value);
+    debounceSpells(item.value, search);
+  };
 
   return (
     <ImageBackgroundWrapper>
@@ -65,22 +87,28 @@ const SpellbookScreen = () => {
             valueField="value"
             value={selectedLevel}
             placeholder="Level"
-            onChange={(item) => setSelectedLevel(item.value)}
+            onChange={handleLevelChange}
           />
 
           <Searchbar
             placeholder="Search Spells"
-            // Todo add on change text functionality
-            onChangeText={setSpellSearch}
+            onChangeText={handleSearch}
             value={spellSearch}
             style={styles.searchBar}
           />
         </View>
 
         <FlatList
-          data={spellbook?.spells}
+          data={filteredSpells}
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => <SpellbookItem item={item} />}
+          ListEmptyComponent={
+            <Text style={styles.text}>
+              {spellSearch || selectedLevel !== '0'
+                ? "No spells Found."
+                : "No spells added to spellbook. Please add spells!"}
+            </Text>
+          }
         />
       </View>
     </ImageBackgroundWrapper>

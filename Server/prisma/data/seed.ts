@@ -2,6 +2,9 @@ import { PrismaClient } from "@prisma/client";
 import * as fs from 'fs'
 import * as path from 'path'
 
+// To seed db run npx prisma db seed
+
+
 const prisma = new PrismaClient()
 
 // function to add spells from the json file to the db

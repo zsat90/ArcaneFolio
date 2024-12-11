@@ -1,94 +1,109 @@
 [
-    {
-      "name": "Affect Normal Fires",
-      "level": 1,
-      "components": ["V", "S", "M"],
-      "range": "5 yds./level",
-      "areaOfEffect": "10-ft. radius",
-      "save": "None",
-      "castingTime": 1,
-      "duration": "2 rds./level",
-      "description": "This spell enables the wizard to cause nonmagical fires--from as small as a torch or lantern to as large as the area of effect--to reduce in size and brightness to become mere coals or increase in light to become as bright as full daylight and increase the illumination to double the normal radius. Note that this does not affect either fuel consumption or damage caused by the fire. The caster can affect any or all fires in the spell's area. He can alter their intensities with a single gesture as long as the spell is in effect. The spell lasts until the caster cancels it, all fuel is burned, or the duration expires. The caster can also extinguish all flames in the area, which expends the spell immediately. The spell does not affect fire elementals or similar creatures.",
-      "magicPointCost": 1,
-      "characterClass": "Wizard"
-    },
-    {
-      "name": "Alarm",
-      "level": 1,
-      "components": ["V", "S", "M"],
-      "range": "10 yds.",
-      "areaOfEffect": "Up to 20-ft. cube",
-      "save": "None",
-      "castingTime": 1,
-      "duration": "4 hrs. + 1 hr./level",
-      "description": "When an alarm spell is cast, the wizard causes a selected area to react to the presence of any creature larger than a normal rat--anything larger than about 1 cubic foot in volume or more than about three pounds in weight. The area of effect can be a portal, a section of floor, stairs, etc. As soon as any creature enters the warded area, touches it, or otherwise contacts it without speaking a password established by the caster, the alarm spell lets out a loud ringing that can be heard clearly within a 60-foot radius. (Reduce the radius by 10 feet for each interposing door and by 20 feet for each substantial interposing wall.) The sound lasts for one round and then ceases. Ethereal or astrally projected creatures do not trigger an alarm, but flying or levitating creatures, invisible creatures, or incorporeal or gaseous creatures do. The caster can dismiss the alarm with a single word. The material components of this spell are a tiny bell and a piece of very fine silver wire.",
-      "magicPointCost": 1,
-      "characterClass": "Wizard"
-    },
-    {
-      "name": "Armor",
-      "level": 1,
-      "components": ["V", "S", "M"],
-      "range": "Touch",
-      "areaOfEffect": "1 creature",
-      "save": "None",
-      "castingTime": 1,
-      "duration": "Special",
-      "description": "By means of this spell, the wizard creates a magical field of force that serves as if it were scale mail armor (AC 6). The spell has no effect on a person already armored or a creature with Armor Class 6 or better. It is not cumulative with the shield spell, but it is cumulative with Dexterity and, in case of fighter/mages, with the shield bonus. The armor spell does not hinder movement or prevent spellcasting, and adds no weight or encumbrance. It lasts until successfully dispelled or until the wearer sustains cumulative damage totaling greater than 8 points + 1 per level of the caster. (It is important to note that the armor does not absorb this damage. The armor merely grants an AC of 6; the wearer still suffers full damage from any successful attacks.) Thus, the wearer might suffer 8 points from an attack, then several minutes later sustain an additional 1 point of damage. Unless the spell were cast by a wizard of 2nd level or higher, it would be dispelled at this time. Until it is dispelled, the armor spell grants the wearer full benefits of the Armor Class gained. The material component is a piece of finely cured leather that has been blessed by a priest.",
-      "magicPointCost": 1,
-      "characterClass": "Wizard"
-    },
-    {
-      "name": "Audible Glamer",
-      "level": 1,
-      "components": ["V", "S", "M"],
-      "range": "60 yds. + 10 yds./level",
-      "areaOfEffect": "Hearing range",
-      "save": "Special",
-      "castingTime": 1,
-      "duration": "3 rds./level",
-      "description": "When the audible glamer spell is cast, the wizard causes a volume of sound to arise, at whatever distance he desires (within range), and seem to recede, approach, or remain at a fixed place as desired. The volume of sound created, however, is directly related to the level of the spellcaster. The volume is based upon the lowest level at which the spell can be cast, 1st level. The noise of the audible glamer at this level is that of four men, maximum. Each additional experience level of the wizard adds a like volume, so that at 2nd level the wizard can have the spell cause sound equal to that of eight men. Thus, talking, singing, shouting, walking, marching, or running sounds can be created. The auditory illusion created by an audible glamer spell can be virtually any type of sound, but the relative volume must be commensurate with the level of the wizard casting the spell. A horde of rats running and squeaking is about the same volume as eight men running and shouting. A roaring lion is equal to the noise volume of 16 men, while a roaring dragon is equal to the noise volume of no fewer than 24 men. A character stating that he does not believe the sound receives a saving throw, and if it succeeds, the character then hears a faint and obviously false sound, emanating from the caster's direction. Note that this spell can enhance the effectiveness of the phantasmal force spell. The material component of the spell is a bit of wool or a small lump of wax.",
-      "magicPointCost": 1,
-      "characterClass": "Wizard"
-    },
-    {
-      "name": "Burning Hands",
-      "level": 1,
-      "components": ["V", "S"],
-      "range": "0",
-      "areaOfEffect": "The caster",
-      "save": "_",
-      "castingTime": 1,
-      "duration": "Instantaneous",
-      "description": "When the wizard casts this spell, a jet of searing flame shoots from his fingertips. His hands must be held so as to send forth a fanlike sheet of flames: The wizard's thumbs must touch each other and the fingers must be spread. The burning hands send out flame jets 5 feet long in a horizontal arc of about 120 degrees in front of the wizard. Any creature in the area of the flames suffers 1d3 points of damage, plus 2 points for each level of experience of the spellcaster, to a maximum of 1d3+20 points of fire damage. Those successfully saving vs. spell receive half damage. Flammable materials touched by the fire burn (for example, cloth, paper, parchment, thin wood, etc.). Such materials can be extinguished in the next round if no other action is taken.",
-      "magicPointCost": 1,
-      "characterClass": "Wizard"
-    },
-    {
-      "name": "Cantrip",
-      "level": 1,
-      "components": ["V", "S"],
-      "range": "10 ft.",
-      "areaOfEffect": "Special",
-      "save": "None",
-      "castingTime": 1,
-      "duration": "1 hr./level",
-      "description": "Cantrips are minor spells studied by wizards during their apprenticeship, regardless of school. The cantrip spell is a practice method for the apprentice, teaching him how to tap minute amounts of magical energy. Once cast, the cantrip spell enables the caster to create minor magical effects for the duration of the spell. However, these effects are so minor that they have severe limitations. They are completely unable to cause a loss of hit points, cannot affect the concentration of spellcasters, and can only create small, obviously magical materials. Furthermore, materials created by a cantrip are extremely fragile and cannot be used as tools of any sort. Lastly, a cantrip lacks the power to duplicate any other spell effects. Whatever manifestation the cantrip takes, it remains in effect only as long as the wizard concentrates. Wizards typically use cantrips to impress common folk, amuse children, and brighten dreary lives. Common tricks with cantrips include tinklings of ethereal music, brightening faded flowers, glowing balls that float over the caster's hand, puffs of wind to flicker candles, spicing up aromas and flavors of bland food, and little whirlwinds to sweep dust under rugs. Combined with the unseen servant spell, it's a tool to make housekeeping and entertaining simpler for the wizard.",
-      "magicPointCost": 1,
-      "characterClass": "Wizard"
-    },
-    {
-      "name": "Change Self",
-      "level": 1,
-      "components": ["V", "S"],
-      "range": "0",
-      "areaOfEffect": "The caster",
-      "save": "None",
-      "castingTime": 1,
-      "duration": "1 hr./level",
-      "description": "The caster of the change self spell alters his physical appearance so that he looks like someone else. The transformation is superficial, though, and does not change the wizard's actual size, weight, voice, or anything else that requires magical alteration. The wizard can change only his facial features, hair, and general physical appearance (including skin color, height, and build). He cannot alter his voice or any other sounds he makes. The change is magical in nature, so creatures who possess the ability to see magical disguises (such as some magical creatures) might detect that the transformation is illusionary. The spell ends after the caster speaks or does something to reveal his true identity, at which time the disguise fails. This spell does not affect any magical items the wizard might be carrying. The material components of this spell are a piece of perfumed soap and a small, clear glass.",
-      "magicPointCost": 1,
-      "characterClass": "Wizard"
-    }
-  ]
-  
+  {
+    "name": "Animal Friendship",
+    "level": 1,
+    "components": ["V", "S", "M"],
+    "range": "10 yds.",
+    "areaOfEffect": "1 animal",
+    "save": "Neg.",
+    "castingTime": 1,
+    "duration": "Permanent",
+    "description": "By means of this spell, the caster is able to show any animal of animal intelligence to semi-intelligence (i.e., Intelligence 1-4) that he desires friendship. If the animal does not roll a successful saving throw vs. spell immediately when the spell is begun, it stands quietly while the caster finishes the spell. Thereafter, it follows the caster about. The spell functions only if the caster actually wishes to be the animal's friend. If the caster has ulterior motives, the animal always senses them (for example, the caster intends to eat the animal, send it ahead to set off traps, etc.). The caster can teach the befriended animal three specific tricks or tasks for each point of Intelligence it possesses. Typical tasks are those taught to a dog or similar pet (i.e., they cannot be complex). Training for each such trick must be done over a period of one week, and all must be done within three months of acquiring the creature. During the three-month period, the animal will not harm the caster, but if the creature is left alone for more than a week, it will revert to its natural state and act accordingly. The caster can use this spell to attract up to 2 Hit Dice of animal(s) per experience level he possesses. This is also the maximum total Hit Dice of the animals that can be attracted and trained at one time: no more than twice the caster's experience level. Only unaligned animals can be attracted, befriended, and trained. The material components of this spell are the caster's holy symbol and a piece of food liked by the animal.",
+    "magicPointCost": 1,
+    "characterClass": "Cleric"
+  },
+  {
+    "name": "Bless",
+    "level": 1,
+    "components": ["V", "S", "M"],
+    "range": "60 yds.",
+    "areaOfEffect": "50-ft. cube",
+    "save": "None",
+    "castingTime": 1,
+    "duration": "6 rds.",
+    "description": "Upon uttering the bless spell, the caster raises the morale of friendly creatures and any saving throw rolls they make against fear effects by +1. Furthermore, it raises their attack dice rolls by +1. A blessing, however, affects only those not already engaged in melee combat. The caster determines at what range (up to 60 yards) he will cast the spell. At the instant the spell is completed, it affects all creatures in a 50-foot cube centered on the point selected by the caster (thus, affected creatures leaving the area are still subject to the spell's effect; those entering the area after the casting is completed are not). A second use of this spell is to bless a single item (for example, a crossbow bolt for use against a rakshasa). The weight of the item is limited to one pound per caster level and the effect lasts until the item is used or the spell duration ends. Multiple bless spells are not cumulative. In addition to the verbal and somatic gesture components, the bless spell requires holy water. This spell can be reversed by the priest to a curse spell that, when cast upon enemy creatures, lowers their morale and attack rolls by -1. The curse requires the sprinkling of unholy water.",
+    "magicPointCost": 1,
+    "characterClass": "Cleric"
+  },
+  {
+    "name": "Combine",
+    "level": 1,
+    "components": ["V", "S"],
+    "range": "Touch",
+    "areaOfEffect": "Circle of priests",
+    "save": "None",
+    "castingTime": 1,
+    "duration": "Special",
+    "description": "Using this spell, three to five priests combine their abilities so that one of them casts spells and turns undead at an enhanced level. The highest-level priest (or one of them, if two or more are tied for highest) stands alone, while the others join hands in a surrounding circle. The central priest casts the combine spell. He temporarily gains one level for each priest in the circle, up to a maximum gain of four levels. The level increase affects turning undead and spell details that vary with the caster's level. Note that the central priest gains no additional spells and that the group is limited to his currently memorized spells. The encircling priests must concentrate on maintaining the combine effect. They lose all Armor Class bonuses for shield and Dexterity. If any of them has his concentration broken, the combine spell ends immediately. If the combine spell is broken while the central priest is in the act of casting a spell, that spell is ruined just as if the caster were disturbed. Spells cast in combination have the full enhanced effect, even if the combine is broken before the duration of the enhanced spell ends. Note that the combination is not broken if only the central caster is disturbed.",
+    "magicPointCost": 1,
+    "characterClass": "Cleric"
+  },
+  {
+    "name": "Command",
+    "level": 1,
+    "components": ["V"],
+    "range": "30 yds.",
+    "areaOfEffect": "1 creature",
+    "save": "None",
+    "castingTime": 1,
+    "duration": "1 rd.",
+    "description": "This spell enables the priest to command another creature with a single word. The command must be uttered in a language understood by the creature. The subject will obey to the best of his/its ability only as long as the command is absolutely clear and unequivocal; thus, a command of 'Suicide!' is ignored. A command to 'Die!' causes the creature to fall in a faint or cataleptic state for one round, but thereafter the creature revives and is alive and well. Typical commands are back, halt, flee, run, stop, fall, go, leave, surrender, sleep, rest, etc. No command affects a creature for more than one round; undead are not affected at all. Creatures with Intelligence of 13 (high) or more, or those with 6 or more Hit Dice (or experience levels) are entitled to a saving throw vs. spell, adjusted for Wisdom. (Creatures with 13 or higher Intelligence and 6 Hit Dice/levels get only one saving throw!)",
+    "magicPointCost": 1,
+    "characterClass": "Cleric"
+  },
+  {
+    "name": "Aid",
+    "level": 2,
+    "components": ["V", "S", "M"],
+    "range": "Touch",
+    "areaOfEffect": "1 creature",
+    "save": "None",
+    "castingTime": 5,
+    "duration": "1 rd. + 1 rd./level",
+    "description": "The recipient of this spell gains the benefit of a bless spell (+1 to attack rolls and saving throws) and a special bonus of 1d8 additional hit points for the duration of the spell. The aid spell enables the recipient to actually have more hit points than his full normal total. The bonus hit points are lost first when the recipient takes damage; they cannot be regained by curative magic. For example, a 1st-level fighter has 8 hit points, suffers 2 points of damage (8-2 = 6), and then receives an aid spell that gives 5 additional hit points. The fighter now has 11 hit points, 5 of which are temporary. If he is then hit for 7 points of damage, 2 normal hit points and all 5 temporary hit points are lost. He then receives a cure light wounds spell that heals 4 points of damage, restoring him to his original 8 hit points. Note that the operation of the spell is unaffected by permanent hit point losses due to energy drain, Hit Die losses, the loss of a familiar, or the operation of certain artifacts; the temporary hit point gain is figured from the new, lower total. The material components of this spell are a tiny strip of white cloth with a sticky substance (such as tree sap) on the ends, plus the priest's holy symbol.",
+    "magicPointCost": 2,
+    "characterClass": "Cleric"
+  },
+
+  {
+    "name": "Augury",
+    "level": 2,
+    "magicPointCost": 2,
+    "characterClass": "Cleric",
+    "components": ["V", "S", "M"],
+    "range": "0",
+    "areaOfEffect": "Special",
+    "save": "None",
+    "castingTime": 2,
+    "duration": "Special",
+    "description": "The priest casting an augury spell seeks to divine whether an action in the immediate future (within one-half hour) will benefit or harm the party. For example, if a party is considering the destruction of a weird seal that closes a portal, an augury spell can be used to find if weal or woe will be the immediate result. If the spell is successful, the DM yields some indication of the probable outcome: 'weal,' 'woe,' or possibly a cryptic puzzle or rhyme. The base chance for receiving a meaningful reply is 70%, plus 1% for each level of the priest casting the spell. Your DM determines any adjustments for the particular conditions of each augury. The material component for an augury spell is a set of gem-inlaid sticks, dragon bones, or similar tokens of at least 1,000 gp value (which are not expended in casting)."
+  },
+  {
+    "name": "Barkskin",
+    "level": 2,
+    "magicPointCost": 2,
+    "characterClass": "Cleric",
+    "components": ["V", "S", "M"],
+    "range": "Touch",
+    "areaOfEffect": "1 creature",
+    "save": "None",
+    "castingTime": 5,
+    "duration": "4 rounds + 1 round/level",
+    "description": "When a priest casts the barkskin spell upon a creature, its skin becomes as tough as bark, increasing its base Armor Class to AC 6, plus 1 AC for every four levels of the priest. This spell does not function in combination with normal armor or any magical protection. In addition, saving throw rolls vs. all attack forms except magic gain a +1 bonus. This spell can be placed on the caster or on any other creature he touches. The material component is a handful of bark from an oak."
+  },
+  {
+    "name": "Chant",
+    "level": 2,
+    "magicPointCost": 2,
+    "characterClass": "Cleric",
+    "components": ["V", "S"],
+    "range": "0",
+    "areaOfEffect": "30-ft. radius",
+    "save": "None",
+    "castingTime": 2,
+    "duration": "Time of chanting",
+    "description": "By means of the chant spell, the priest brings special favor upon himself and his party, and causes harm to his enemies. All attack and damage rolls and saving throws made by those in the area of effect who are friendly to the priest gain +1 bonuses, while those of the priest's enemies suffer -1 penalties. This continues as long as the caster continues to chant and is stationary. However, interruptions such as damage or silence break the spell. If a 3rd-level prayer spell is spoken while a priest of the same religion is chanting, the effect is increased to +2 and -2."
+  }
+
+
+]

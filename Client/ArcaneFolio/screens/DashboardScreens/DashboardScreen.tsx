@@ -1,14 +1,15 @@
 import React from "react";
-import { View, StyleSheet, Text } from "react-native";
+import { View, StyleSheet} from "react-native";
 import CharacterHeader from "@/components/Characters/CharacterHeader";
 import NavDrawer from "../../components/Navigation/navDrawer";
+import { useCharacterContext } from "@/components/Characters/CharacterContext";
 
-const DashboardScreen: React.FC = ({ route }: any) => {
-    const { selectedCharacter } = route.params;
+const DashboardScreen: React.FC = () => {
+    const { selectedCharacter  } = useCharacterContext()
 
     return(
             <View style={styles.container}>
-                <CharacterHeader characterName={selectedCharacter?.name} />
+                <CharacterHeader characterName={selectedCharacter?.name} magicPoints={selectedCharacter?.magicPoints} />
                 
                 <NavDrawer />
                 
