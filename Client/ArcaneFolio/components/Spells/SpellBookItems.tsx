@@ -2,19 +2,19 @@ import React, { useRef, useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useNavigation } from "@react-navigation/native";
-import { useCharacterContext } from "../Characters/CharacterContext";
-import { useSpellbook } from "./SpellContext";
-import { removeSpellsFromSpellbook } from "@/utils/Spells/spellsService";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import Reanimated, {
   SharedValue,
   useAnimatedStyle,
 } from "react-native-reanimated";
 import {castSpell} from '../../utils/Spells/spellBookActions'
+import { handleRemoveSpells } from "@/redux/slices/spellbookSlice";
+import { updatedMagicPoints } from '../../redux/slices/characterSlice'
 
 const SpellbookItem = ({ item }) => {
-  const { selectedCharacter, setSelectedCharacter } = useCharacterContext();
-  const { spellbook, setSpellbook } = useSpellbook();
+  const selectedCharacter = useAppSelector((state) => state.character.selectedCharacter)
+  const dispatch = useAppDispatch()
   const swipeableRef = useRef(null);
 
   const navigation = useNavigation<any>();
@@ -23,32 +23,23 @@ const SpellbookItem = ({ item }) => {
     navigation.navigate("SpellDetails", { spell: item });
   };
 
-  const handleRemoveSpell = async () => {
+  const handleRemoveSpellPress = async () => {
     const spellbookId = selectedCharacter?.spellbookId;
     const spellId = item.id;
 
-    try {
-      const response = await removeSpellsFromSpellbook(spellbookId, spellId);
+    try{
+      const response = await dispatch(handleRemoveSpells({spellbookId, spellId}))
 
-      if (response.success) {
-        const updatedSpellbook = {
-          ...spellbook,
-          spells: spellbook.spells.filter(spell => spell.id !== spellId),
-        };
-
-        setSpellbook(updatedSpellbook);
-
-        Alert.alert("Spell successfully removed from Spellbook");
-
-        if (swipeableRef.current) {
-          swipeableRef.current.close();
-        }
+      if (response.type === 'spellbook/removeSpell/fulfilled') {
+        Alert.alert('Spell successfully removed from Spellbook');
+        swipeableRef.current?.close()
       } else {
-        Alert.alert(response.message);
+        Alert.alert('Failed to remove spell');
+        swipeableRef.current?.close()
       }
-    } catch (err) {
-      console.error("Error removing spell", err);
-    }
+    }catch(err){
+      console.error('Error Removing Spell', err)
+    } 
   };
 
   const RightAction = (
@@ -70,10 +61,7 @@ const SpellbookItem = ({ item }) => {
               swipeableRef.current.close();
             }
             
-            setSelectedCharacter(prev => ({
-              ...prev,
-              magicPoints: updatedMP
-            }));
+            dispatch(updatedMagicPoints(updatedMP))
 
 
           }catch(err){
@@ -84,7 +72,7 @@ const SpellbookItem = ({ item }) => {
         </Text>
         </Reanimated.View>
         <Reanimated.View style={styles.iconButton2}>
-        <Text style={styles.actionText} onPress={handleRemoveSpell}>
+        <Text style={styles.actionText} onPress={handleRemoveSpellPress}>
           <Icon name='delete' size={30}/>
         </Text>
         </Reanimated.View>

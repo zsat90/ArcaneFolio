@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, StyleSheet, Button, Text, TouchableOpacity } from "react-native";
+import { View, StyleSheet, Text, TouchableOpacity } from "react-native";
 import {
   createDrawerNavigator,
   DrawerContentScrollView,
@@ -13,15 +13,23 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import CommunityIcon from "react-native-vector-icons/MaterialCommunityIcons";
 import TextInput from "../TextInput";
 import { handleAddMagicPoints } from "@/utils/Validation/userInputs";
-import { addMagicPoints, resetMagicPoints } from "../../utils/navDrawer/navService";
-import { useCharacterContext } from "../Characters/CharacterContext";
+import { handleLogout } from "@/utils/Login/LoginAuth";
+import { useNavigation } from "@react-navigation/native";
+import { useAppSelector, useAppDispatch } from "@/redux/hooks";
+import { addMagicPoints, resetMagicPoints } from "@/redux/slices/characterSlice";
+
+
 
 const Drawer = createDrawerNavigator();
 
 const NavDrawer: React.FC = () => {
   const [magicPoint, setMagicPoints] = useState(null);
   const [name, setName] = useState({ value: "", error: "" });
-  const { selectedCharacter, setSelectedCharacter } = useCharacterContext();
+  const [token, setToken] = useState('')
+  const navigation = useNavigation()
+  const selectedCharacter = useAppSelector((state) => state.character.selectedCharacter)
+  const dispatch = useAppDispatch()
+
 
   return (
     <Drawer.Navigator
@@ -44,8 +52,7 @@ const NavDrawer: React.FC = () => {
               <TouchableOpacity
                 style={styles.campfireIcon}
                 onPress={() => {
-                  resetMagicPoints(selectedCharacter.id, setSelectedCharacter)
-
+                  dispatch(resetMagicPoints(selectedCharacter.id))
                 }}
               >
                 <CommunityIcon
@@ -70,12 +77,8 @@ const NavDrawer: React.FC = () => {
 
               <TouchableOpacity
                 style={styles.iconContainer}
-                onPress={() => {
-                  addMagicPoints(
-                    selectedCharacter.id,
-                    magicPoint.value,
-                    setSelectedCharacter
-                  );
+                onPress={() => { 
+                  dispatch(addMagicPoints({characterId: selectedCharacter.id, magicPoints: magicPoint.value}))
                   setMagicPoints(null);
                 }}
               >
@@ -95,10 +98,7 @@ const NavDrawer: React.FC = () => {
               icon={({ color }) => (
                 <Icon name="logout" color={color} size={24} />
               )}
-              onPress={() => {
-                // TODO: Handle logout action here
-                props.navigation.navigate("Login");
-              }}
+              onPress={() => handleLogout({setToken, navigation})}
               labelStyle={styles.logoutLabel}
             />
           </View>

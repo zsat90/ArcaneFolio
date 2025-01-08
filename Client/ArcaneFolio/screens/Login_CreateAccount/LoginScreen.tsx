@@ -41,7 +41,7 @@ const LoginScreen = ({ navigation }) => {
       />
       
       {/* TODO add Forgot Password functionality */} 
-      <Text style={globalStyles.text}>Forgot Password?</Text>
+      {/* <Text style={globalStyles.text}>Forgot Password?</Text> */}
       <View style={styles.buttonContainer}>
         
         <Buttons

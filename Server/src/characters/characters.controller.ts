@@ -1,4 +1,4 @@
-import { Body, Controller, UseGuards, Request, Post, Get, Param, ParseIntPipe, Put } from '@nestjs/common';
+import { Body, Controller, UseGuards, Request, Post, Get, Param, ParseIntPipe, Put, Delete } from '@nestjs/common';
 import { CharactersService } from './characters.service';
 import { CharacterDto } from './dto/characters.dto';
 import { JwtAuthGuard } from 'src/auth/auth.guard';
@@ -48,6 +48,25 @@ export class CharactersController {
     ) {
 
         return this.characterService.resetMagicPoints(characterId)
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Put('update/:id')
+    async editCharacter(
+        @Param('id', ParseIntPipe) characterId: number,
+        @Body() updateData: Partial<CharacterDto> 
+    ){
+        return this.characterService.updateCharacter(characterId, updateData)
+
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Delete('delete/:id')
+    async deleteCharacter(
+        @Param('id', ParseIntPipe) characterId: number
+    ){
+        return this.characterService.deleteCharacter(characterId)
+
     }
 
 }

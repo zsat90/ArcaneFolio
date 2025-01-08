@@ -14,6 +14,9 @@ export class CharactersService {
         where: {
           userId: userId,
         },
+        orderBy: {
+          name: 'asc'
+        }
       });
     } catch (err) {
       throw new InternalServerErrorException(err);
@@ -72,6 +75,20 @@ export class CharactersService {
       throw new InternalServerErrorException(err)
     }
   
+  }
+
+  // Delete character
+  async deleteCharacter(characterId: number) {
+    try{
+      await this.prisma.character.delete({
+        where: {
+          id: characterId
+        }
+      })
+
+    }catch(err){
+      throw new InternalServerErrorException(err)
+    }
   }
 
   // Add Magic Points to Character

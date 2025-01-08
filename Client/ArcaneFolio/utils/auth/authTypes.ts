@@ -11,6 +11,11 @@ export type LoginParams = {
     navigation: any
 }
 
+export type LogoutParams = {
+    setToken: React.Dispatch<React.SetStateAction<string | null>>
+    navigation: any
+}
+
 
 export type RegisterParams = LoginParams & {
     name: string;

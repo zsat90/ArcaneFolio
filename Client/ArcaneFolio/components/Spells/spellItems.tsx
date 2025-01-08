@@ -1,60 +1,51 @@
 import React, {useRef} from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { useCharacterContext } from "../Characters/CharacterContext";
-import {addSpellsToSpellbook} from '../../utils/Spells/spellsService'
-import { useSpellbook } from "./SpellContext";
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Reanimated, { SharedValue, useAnimatedStyle } from "react-native-reanimated";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import { handleAddSpell } from "@/redux/slices/spellbookSlice";
 
 
 
-const SpellItem = ({ item, addSpellToSpellbook }) => {
-    const {selectedCharacter} = useCharacterContext()
-    const {spellbook, setSpellbook} = useSpellbook()
+const SpellItem = ({ item }) => {
+    const dispatch = useAppDispatch()
     const swipeableRef = useRef(null)
-    
 
+    const selectedCharacter = useAppSelector((state) => state.character.selectedCharacter)
     const navigation = useNavigation<any>()
     
     const handlePress = () => {
         navigation.navigate('SpellDetails', {spell: item})
     }
 
-    const handleAddSpell = async () => {
-        const spellbookId = selectedCharacter?.spellbookId;
-        const spellId = item.id
-
-        try{
-
-          if (item.characterClass !== selectedCharacter.characterClass) {
-            Alert.alert("Spell not added, check Character class");
-            return;
-          }
-
-          const response = await addSpellsToSpellbook(spellbookId, spellId)
-
-          if(response.success){
-            const updatedSpellbook = {...spellbook , spells:[...spellbook.spells, item]}
-
-            setSpellbook(updatedSpellbook)
-
-            Alert.alert('Spell successfully added to Spellbook')
-
-            if(swipeableRef.current){
-              swipeableRef.current.close();
-            }
-
-          }else{
-            Alert.alert(response.message)
-          }
-
-        }catch(err){
-          console.error("Error adding spell to spellbook:", err);
+    const handleAddSpellItem = async () => {
+      const spellbookId = selectedCharacter?.spellbookId;
+      const spellId = item.id;
+    
+      try {
+        if (item.characterClass !== selectedCharacter.characterClass) {
+          Alert.alert("Spell not added, check Character class");
+          return;
         }
-
-    }
+    
+        // Dispatch the async action with the necessary parameters
+        const response = await dispatch(handleAddSpell({ spellbookId, spellId }));
+    
+        if (response.type === 'spellbook/addSpell/fulfilled') {
+          Alert.alert('Spell successfully added to Spellbook');
+          swipeableRef.current?.close()
+        } else {
+          Alert.alert('Failed to add spell');
+          swipeableRef.current?.close()
+        }
+      } catch (err) {
+        console.error("Error adding spell to spellbook:", err);
+        Alert.alert("An error occurred while adding the spell.");
+      }
+    };
+    
 
     const RightAction = (progress: SharedValue<number>, drag: SharedValue<number>) => {
       const animatedStyle = useAnimatedStyle(() => {
@@ -66,7 +57,7 @@ const SpellItem = ({ item, addSpellToSpellbook }) => {
   
       return(
         <Reanimated.View style={[animatedStyle, styles.rightActionContainer]}>
-          <Text style={styles.actionText} onPress={handleAddSpell}><Icon name="add" size={30}/></Text>
+          <Text style={styles.actionText} onPress={handleAddSpellItem}><Icon name="add" size={30}/></Text>
         </Reanimated.View>
       )
     }

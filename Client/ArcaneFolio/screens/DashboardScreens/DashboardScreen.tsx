@@ -2,10 +2,11 @@ import React from "react";
 import { View, StyleSheet} from "react-native";
 import CharacterHeader from "@/components/Characters/CharacterHeader";
 import NavDrawer from "../../components/Navigation/navDrawer";
-import { useCharacterContext } from "@/components/Characters/CharacterContext";
+import { useAppSelector } from "@/redux/hooks";
 
 const DashboardScreen: React.FC = () => {
-    const { selectedCharacter  } = useCharacterContext()
+    const selectedCharacter = useAppSelector((state) => state.character.selectedCharacter)
+    
 
     return(
             <View style={styles.container}>

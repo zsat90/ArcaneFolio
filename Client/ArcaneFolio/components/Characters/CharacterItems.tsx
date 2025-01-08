@@ -1,42 +1,117 @@
-import React, {useEffect} from "react";
-import { View, StyleSheet, Text, Button } from "react-native";
+import React, { useRef } from "react";
+import { View, StyleSheet, Text, TouchableOpacity } from "react-native";
 import { Character } from "@/types/characterTypes";
+import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
+import Reanimated, {
+  SharedValue,
+  useAnimatedStyle,
+} from "react-native-reanimated";
+import Icon from "react-native-vector-icons/MaterialIcons";
+import { Alert } from "react-native";
+import { useAppDispatch } from "../../redux/hooks";
+import {
+  selectCharacter,
+  deleteCharacter,
+} from "@/redux/slices/characterSlice";
 
 interface CharacterItemProps {
   item: Character;
   navigation: any;
-  handleCharacterSelect: (
-    item: Character,
-    navigation: any,
-    setSelectedCharacter: React.Dispatch<React.SetStateAction<Character | null>>
-  ) => void;
-  setSelectedCharacter: React.Dispatch<React.SetStateAction<Character | null>>;
 }
 
-const CharacterItem: React.FC<CharacterItemProps> = ({ item, navigation, handleCharacterSelect, setSelectedCharacter }) => {
+const CharacterItem: React.FC<CharacterItemProps> = ({ item, navigation }) => {
+  const dispatch = useAppDispatch()
+  const swipeableRef = useRef(null);
 
-  const handleSelectWithMagicPoints = async () => {
-    handleCharacterSelect(item, navigation, setSelectedCharacter); 
+  const handleSelectCharacter = async () => {
+    dispatch(selectCharacter(item))
+    navigation.navigate('Dashboard', {selectCharacter: item})
+  };
+
+  const handleEditCharacter = (characterId: number) => {
+    dispatch(selectCharacter(item))
+    navigation.navigate('EditCharacter', {characterId})
+  };
+
+  const handleDeletePress = () => {
+    Alert.alert(
+      "Delete Character",
+      `Are you sure you want to delete ${item.name}?`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              dispatch(deleteCharacter(item.id))
+              Alert.alert(`${item.name} deleted successfully`);
+            } catch (error) {
+              console.error("Failed to delete character:", error);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const RightAction = (
+    progress: SharedValue<number>,
+    drag: SharedValue<number>
+  ) => {
+    const animatedStyle = useAnimatedStyle(() => {
+      return {
+        transform: [{ translateX: drag.value + 140 }],
+      };
+    });
+
+    return (
+      <Reanimated.View style={[animatedStyle, styles.rightActionContainer]}>
+        <Reanimated.View style={styles.iconButton1}>
+          <Text style={styles.actionText} onPress={() => handleEditCharacter(item.id)}>
+            <Icon name="edit" size={30} />
+          </Text>
+        </Reanimated.View>
+
+        <Reanimated.View style={styles.iconButton2}>
+          <Text style={styles.actionText} onPress={handleDeletePress}>
+            <Icon name="delete" size={30} />
+          </Text>
+        </Reanimated.View>
+      </Reanimated.View>
+    );
   };
 
   return (
-    
-    <View style={styles.characterItem}>
-      <View style={styles.textContainer}>
-        <Text style={styles.characterName}>{item.name}</Text>
-        <Text style={styles.characterClass}>Class: {item.characterClass}</Text>
-        <Text style={styles.characterLevel}>Level: {item.level}</Text>
-      </View>
-      <Button title="Select" onPress={handleSelectWithMagicPoints} />
-    </View>
-    
+    <ReanimatedSwipeable
+      ref={swipeableRef}
+      friction={2}
+      enableTrackpadTwoFingerGesture
+      rightThreshold={40}
+      renderRightActions={RightAction}
+    >
+      <TouchableOpacity onPress={handleSelectCharacter}>
+        <View style={styles.characterItem}>
+          <View style={styles.textContainer}>
+            <Text style={styles.characterName}>{item.name}</Text>
+            <Text style={styles.characterClass}>
+              Class: {item.characterClass}
+            </Text>
+            <Text style={styles.characterLevel}>Level: {item.level}</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    </ReanimatedSwipeable>
   );
 };
 
 const styles = StyleSheet.create({
   characterItem: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "space-evenly",
     padding: 15,
     marginBottom: 15,
     marginTop: 15,
@@ -51,6 +126,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.5,
     alignItems: "center",
+    height: 90,
   },
 
   textContainer: {
@@ -61,17 +137,50 @@ const styles = StyleSheet.create({
   characterName: {
     fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 5
+    marginBottom: 5,
   },
   characterClass: {
     fontSize: 14,
     color: "gray",
+    marginBottom: 5,
   },
 
   characterLevel: {
     fontSize: 14,
     color: "gray",
-  }
+  },
+
+  rightActionContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+    flexDirection: "row",
+  },
+
+  actionText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 18,
+    textAlign: "center",
+  },
+
+  iconButton1: {
+    backgroundColor: "green",
+    height: 85,
+    width: 70,
+    borderTopLeftRadius: 5,
+    borderBottomLeftRadius: 5,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  iconButton2: {
+    backgroundColor: "#e0040c",
+    height: 85,
+    width: 70,
+    borderTopRightRadius: 10,
+    borderBottomRightRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
 });
 
 export default CharacterItem;

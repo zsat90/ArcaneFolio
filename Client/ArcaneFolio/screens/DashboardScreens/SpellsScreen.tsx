@@ -3,31 +3,32 @@ import { Text, View, StyleSheet, FlatList } from "react-native";
 import ImageBackgroundWrapper from "../../components/imageBackground";
 import { Searchbar } from "react-native-paper";
 import { Dropdown } from "react-native-element-dropdown";
-import { filterSpells, getSpellsByClass } from "../../utils/Spells/spellsService";
 import SpellItem from "../../components/Spells/spellItems";
-import debounce from "lodash/debounce"; 
+import debounce from "lodash/debounce";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import {
+  fetchSpellsByClass,
+  fetchFilteredSpells,
+} from "@/redux/slices/spellSlice";
 
-const SpellsScreen: React.FC<any> = ({characterClass}) => {
-  // Todo Set the state to use the spells type instead of <any>
-  const [spells, setSpells] = useState<any[]>([]);
+const SpellsScreen: React.FC<any> = ({ characterClass }) => {
+  const dispatch = useAppDispatch();
+  const spells = useAppSelector((state) => state.spells.spells);
+
   const [spellSearch, setSpellSearch] = useState<string>("");
   const [selectedLevel, setSelectedLevel] = useState("All");
-  const [selectedSpell, setSelectedSpell] = useState("");
-
 
   useEffect(() => {
     const fetchSpells = async () => {
       try {
-        const spellData = await getSpellsByClass(characterClass);
-        
-        setSpells(spellData);
+        dispatch(fetchSpellsByClass(characterClass));
       } catch (err) {
         console.error(err);
       }
     };
 
     fetchSpells();
-  }, [characterClass]);
+  }, [dispatch, characterClass]);
 
   // level array
   const levels = [
@@ -47,8 +48,9 @@ const SpellsScreen: React.FC<any> = ({characterClass}) => {
     () =>
       debounce(async (level: string, text: string) => {
         try {
-          const filtered = await filterSpells(characterClass, level, text);
-          setSpells(filtered);
+          dispatch(
+            fetchFilteredSpells({ characterClass, level, search: text })
+          );
         } catch (err) {
           console.error(err);
         }
@@ -63,7 +65,7 @@ const SpellsScreen: React.FC<any> = ({characterClass}) => {
 
   const handleLevelChange = async (item: any) => {
     setSelectedLevel(item.value);
-    debounceSpells(item.value,spellSearch)
+    debounceSpells(item.value, spellSearch);
   };
 
   return (
@@ -76,7 +78,7 @@ const SpellsScreen: React.FC<any> = ({characterClass}) => {
             labelField="label"
             valueField="value"
             value={selectedLevel}
-            placeholder="Level"
+            placeholder="All Levels"
             onChange={handleLevelChange}
           />
 
@@ -93,9 +95,7 @@ const SpellsScreen: React.FC<any> = ({characterClass}) => {
             keyExtractor={(item) => item.id.toString()}
             data={spells}
             contentContainerStyle={styles.listContainer}
-            renderItem={({ item }) => (
-              <SpellItem item={item} addSpellToSpellbook={setSelectedSpell} />
-            )}
+            renderItem={({ item }) => <SpellItem item={item} />}
             ListEmptyComponent={
               <Text style={styles.text}>
                 {spells.length === 0
@@ -103,7 +103,6 @@ const SpellsScreen: React.FC<any> = ({characterClass}) => {
                   : "No spells added to spellbook. Please add spells!"}
               </Text>
             }
-            
           />
         </View>
       </View>

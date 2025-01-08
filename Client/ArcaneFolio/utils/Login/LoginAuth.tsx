@@ -7,7 +7,8 @@ import {
 import API_ENDPOINTS from "../apiConfig";
 import axiosInstance from "../axiosInstance";
 import * as SecureStore from "expo-secure-store";
-import { LoginParams, RegisterParams } from "../auth/authTypes";
+import { LoginParams, RegisterParams, LogoutParams } from "../auth/authTypes";
+import Toast from 'react-native-toast-message'
 
 // Handle password and confirm password
 export const handlePasswordMatch = (
@@ -42,12 +43,23 @@ export const handleLogin = async (loginParams: LoginParams) => {
     const token = response.data.accessToken;
 
     await SecureStore.setItemAsync("token", token);
-
     setToken(token);
 
     navigation.navigate("Characters");
   } catch (err) {
-    console.error("Login error", err);
+    if(err.response && err.response.status === 401) {
+      Toast.show({
+        type: 'error',
+        text1: 'Incorrect Email or Password',
+        visibilityTime: 3000,
+      });
+    }else{
+      Toast.show({
+        type: 'error',
+        text1: 'Unexpected Error Occured. Please try again.',
+        visibilityTime: 3000,
+      });
+    }
   }
 };
 
@@ -105,3 +117,20 @@ export const loginPress = (navigation: any) => {
 export const handleCreateAccount = (navigation: any) => {
   navigation.navigate("CreateAccount");
 };
+
+
+export const handleLogout = async (logoutParams: LogoutParams) => {
+  const {setToken, navigation} = logoutParams
+
+  try{
+
+    await SecureStore.deleteItemAsync('token')
+
+    setToken(null)
+    navigation.navigate('Login')
+
+  }catch(err){
+    console.error(err)
+  }
+
+}

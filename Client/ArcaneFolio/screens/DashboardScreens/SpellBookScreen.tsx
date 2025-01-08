@@ -4,10 +4,10 @@ import { Dropdown } from "react-native-element-dropdown";
 import { Searchbar } from "react-native-paper";
 import ImageBackgroundWrapper from "../../components/imageBackground";
 import SpellbookItem from "../../components/Spells/SpellBookItems";
-import { fetchSpellbook, filterSpells } from "@/utils/Spells/spellsService";
-import { useCharacterContext } from "../../components/Characters/CharacterContext";
 import debounce from "lodash/debounce";
-import { useSpellbook } from "@/components/Spells/SpellContext";
+import { useAppSelector, useAppDispatch } from "@/redux/hooks";
+import { fetchSpellbook, fetchFilteredSpells } from "@/redux/slices/spellbookSlice";
+
 
 const SpellbookScreen = () => {
   // level array
@@ -24,46 +24,42 @@ const SpellbookScreen = () => {
     { label: "9th", value: "9" },
   ];
 
+  const selectedCharacter = useAppSelector((state) => state.character.selectedCharacter)
+  const filteredSpells = useAppSelector((state) => state.spellbook.filteredSpells)
+  const dispatch = useAppDispatch()
   const [spellSearch, setSpellSearch] = useState<string>("");
-  const [filteredSpells, setFilteredSpells] = useState([]);
   const [search, setSearch] = useState("");
   const [selectedLevel, setSelectedLevel] = useState("0");
-  const { selectedCharacter } = useCharacterContext();
-  const {spellbook} = useSpellbook()
 
-  const characterClass = selectedCharacter.characterClass
+
+  const characterClass = selectedCharacter?.characterClass
 
   useEffect(() => {
-    const fetchSpellbookData = async () => {
-      try {
-        const data = await fetchSpellbook(selectedCharacter.spellbookId);
-        setFilteredSpells(data.spells);
-        
-      } catch (err) {
-        throw err;
-      }
-    };
     if (selectedCharacter?.spellbookId) {
-      fetchSpellbookData();
+      dispatch(fetchFilteredSpells({
+        characterClass,
+        level: selectedLevel,
+        search: spellSearch,
+        spellbookId: selectedCharacter.spellbookId
+      }))
     }
-  }, [selectedCharacter.spellbookId, spellbook]);
+  }, [selectedCharacter?.spellbookId, dispatch]);
 
   const debounceSpells = useMemo(
     () =>
       debounce(async (level: string, text: string) => {
         try {
-          const filtered = await filterSpells(
-            characterClass,
-            level,
-            text,
-            selectedCharacter.spellbookId
-          );
-          setFilteredSpells(filtered);
+          await dispatch(fetchFilteredSpells({ 
+            characterClass, 
+            level, 
+            search: text, 
+            spellbookId: selectedCharacter.spellbookId 
+          })).unwrap(); 
         } catch (err) {
           console.error(err);
         }
       }, 500),
-    []
+    [selectedCharacter]
   );
 
   const handleSearch = async (text: string) => {

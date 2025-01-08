@@ -60,7 +60,7 @@ export const addSpellsToSpellbook = async (spellbookId: number, spellId: number)
         const response = await axiosInstance.post(endpoint, { spellId });
 
         if (response.status === 201) {
-            return { success: true, message: 'Spell added successfully' };
+            return { success: true, message: 'Spell added successfully', spellId, spell: response.data.updatedSpellbook };
         } else if (response.status === 400) {
             return { success: false, message: 'Spell already exists in Spellbook' };
         } else {
@@ -76,15 +76,16 @@ export const addSpellsToSpellbook = async (spellbookId: number, spellId: number)
 
 export const fetchSpellbook = async(spellbookId: number) => {
     try{
-        const response = await axiosInstance.get(`/spells/spellbook/${spellbookId}`)
+        const endpoint = API_ENDPOINTS.FETCH_SPELLS.replace(':id', spellbookId.toString())
+        const response = await axiosInstance.get(endpoint)
         
         if(!response) throw new Error('Failed to fetch spells')
-
         return response.data
+        
 
 
     }catch(err){
-        console.error('Error', err)
+        console.error('Fetch spellbook error', err)
     }
 }
 

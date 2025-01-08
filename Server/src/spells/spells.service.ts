@@ -64,9 +64,10 @@ export class SpellsService {
         },
         include: {
           spells: {
-            orderBy: {
-              name: 'asc',
-            },
+            orderBy: [
+              { level: 'asc' },
+              { name: 'asc' }, 
+            ],
           },
         },
       });

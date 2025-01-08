@@ -5,35 +5,36 @@ import { Character } from "../../types/characterTypes";
 import CharacterItems from "../../components/Characters/CharacterItems";
 import Buttons from "../../components/Login/Button";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { fetchUserCharacters } from "../../utils/Character/characterService";
 import globalStyles from '../../styles/styles'
-import { useCharacterContext } from "@/components/Characters/CharacterContext";
-import {handleCharacterSelect} from '../../utils/Character/CharacterActions'
+import {useAppSelector, useAppDispatch} from '../../redux/hooks'
+import { selectCharacter, fetchUserCharacters } from '../../redux/slices/characterSlice'
 
 
 type CharacterSelectScreenProps = {
   navigation: StackNavigationProp<any>;
 };
 
-const CharacterSelectScreen: React.FC<CharacterSelectScreenProps> = ({
-  navigation,
-}) => {
-  const [characters, setCharacters] = useState<Character[]>();
-  const {selectCharacter} = useCharacterContext()
+const CharacterSelectScreen: React.FC<CharacterSelectScreenProps> = ({navigation}) => {
+  const dispatch = useAppDispatch()
+
+  //Get characters from the Redux state. Uses slice
+  const characters = useAppSelector((state) => state.character.characterList)
   
 
   useEffect(() => {
-    const fetchCharacters = async () => {
-      try {
-        const charactersData = await fetchUserCharacters();
-        setCharacters(charactersData);
-      } catch (err) {
-        console.error(err);
-      }
-    };
+    dispatch(fetchUserCharacters())
+  }, [dispatch]);
 
-    fetchCharacters();
-  }, []);
+  // Handle selection of character
+  const handleCharacterSelect = (character: Character) => {
+    dispatch(selectCharacter(character));
+    navigation.navigate('Dashboard', {selectCharacter: character})
+  }
+
+  // function to remove characters from list when deleted.
+  const removeCharacter = (id: number) => {
+    
+  }
 
   return (
     <ImageBackgroundWrapper>
@@ -46,8 +47,6 @@ const CharacterSelectScreen: React.FC<CharacterSelectScreenProps> = ({
               <CharacterItems
                 item={item}
                 navigation={navigation}
-                handleCharacterSelect={handleCharacterSelect}
-                setSelectedCharacter={selectCharacter}
               />
             )}
           />
@@ -60,7 +59,7 @@ const CharacterSelectScreen: React.FC<CharacterSelectScreenProps> = ({
             mode="contained"
             onPress={() => navigation.navigate("AddCharacter")}
           >
-            Add A Character
+            <Text style={styles.buttonText}>Add A Character</Text>
           </Buttons>
         </View>
       </View>
@@ -79,6 +78,9 @@ export const styles = StyleSheet.create({
     marginBottom: 50,
     marginTop: 50
   },
+  buttonText: {
+    fontSize: 18
+  }
 
 });
 

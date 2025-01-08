@@ -4,4 +4,5 @@ export interface Character {
     characterClass: string;
     level: number;
     magicPoints: number;
+    spellbookId: number
 }

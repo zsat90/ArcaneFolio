@@ -12,7 +12,7 @@ const globalStyles = StyleSheet.create({
       },
 
       title: {
-        fontSize: 50,
+        fontSize: 40,
         color: "black",
         marginBottom: 50,
         marginTop: 50,
@@ -24,7 +24,7 @@ const globalStyles = StyleSheet.create({
       text: {
         color: '#231F20',
         fontSize: 18,
-        fontFamily: 'Courier'
+        fontFamily: 'Courier',
       }
 
 

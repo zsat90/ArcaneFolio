@@ -33,6 +33,7 @@ const Navbar = () => {
       name="Wizard Spells"
       children={() => <SpellScreen characterClass='Wizard'/>}
       options={{
+        unmountOnBlur: true,
         tabBarIcon: () => (
           <Icon name="library-books" color={"#A9FFF7"} size={25} />
         ),
@@ -42,6 +43,7 @@ const Navbar = () => {
         name="Priest Spells"
         children={() => <SpellScreen characterClass='Cleric'/>}
         options={{
+          unmountOnBlur: true,
           tabBarIcon: () => (
             <Icon name="library-books" color={"#A9FFF7"} size={25} />
           ),

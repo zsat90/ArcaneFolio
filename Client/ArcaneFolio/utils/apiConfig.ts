@@ -9,9 +9,12 @@ const API_ENDPOINTS = {
     ADD_SPELLS: '/spells/:spellbookId/add-spell',
     SPELLBOOK: '/spells/spellbook/:spellbookId',
     REMOVE_SPELL: '/spells/spellbook',
+    FETCH_SPELLS: '/spells/spellbook/:id',
     FILTER: 'spells/:characterClass/filter',
     ADD_MAGIC_POINTS: 'characters/:id/add',
-    RESET_MAGIC_POINTS: 'characters/:id/reset'
+    RESET_MAGIC_POINTS: 'characters/:id/reset',
+    EDIT_CHARACTER: 'characters/update/:id',
+    DELETE_CHARACTER: 'characters/delete/:id'
 
 }
 
