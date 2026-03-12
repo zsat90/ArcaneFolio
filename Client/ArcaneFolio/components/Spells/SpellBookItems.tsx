@@ -1,5 +1,6 @@
-import React, { useRef, useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import React, { useRef } from "react";
+import { View, Text, TouchableOpacity, StyleSheet} from "react-native";
+import Toast from 'react-native-toast-message'
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useNavigation } from "@react-navigation/native";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
@@ -31,10 +32,18 @@ const SpellbookItem = ({ item }) => {
       const response = await dispatch(handleRemoveSpells({spellbookId, spellId}))
 
       if (response.type === 'spellbook/removeSpell/fulfilled') {
-        Alert.alert('Spell successfully removed from Spellbook');
+        Toast.show({
+          type: 'success',
+          text1: 'Spell successfully removed from Spellbook',
+          visibilityTime: 3000,
+        })
         swipeableRef.current?.close()
       } else {
-        Alert.alert('Failed to remove spell');
+        Toast.show({
+          type: 'error',
+          text1: 'Error removing spell',
+          visibilityTime: 3000,
+        })
         swipeableRef.current?.close()
       }
     }catch(err){

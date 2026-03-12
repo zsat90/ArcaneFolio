@@ -1,5 +1,5 @@
 import React, { useRef } from "react";
-import { View, StyleSheet, Text, TouchableOpacity } from "react-native";
+import { View, StyleSheet, Text, TouchableOpacity, Alert } from "react-native";
 import { Character } from "@/types/characterTypes";
 import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import Reanimated, {
@@ -7,7 +7,7 @@ import Reanimated, {
   useAnimatedStyle,
 } from "react-native-reanimated";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { Alert } from "react-native";
+import Toast from 'react-native-toast-message'
 import { useAppDispatch } from "../../redux/hooks";
 import {
   selectCharacter,
@@ -25,11 +25,12 @@ const CharacterItem: React.FC<CharacterItemProps> = ({ item, navigation }) => {
 
   const handleSelectCharacter = async () => {
     dispatch(selectCharacter(item))
-    navigation.navigate('Dashboard', {selectCharacter: item})
+    navigation.navigate('Dashboard')
   };
 
   const handleEditCharacter = (characterId: number) => {
     dispatch(selectCharacter(item))
+    swipeableRef.current?.close()
     navigation.navigate('EditCharacter', {characterId})
   };
 
@@ -48,7 +49,11 @@ const CharacterItem: React.FC<CharacterItemProps> = ({ item, navigation }) => {
           onPress: async () => {
             try {
               dispatch(deleteCharacter(item.id))
-              Alert.alert(`${item.name} deleted successfully`);
+              Toast.show({
+                type: 'success',
+                text1: `${item.name} deleted successfully`,
+                visibilityTime: 3000
+              })
             } catch (error) {
               console.error("Failed to delete character:", error);
             }

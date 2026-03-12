@@ -1,5 +1,6 @@
 import React, {useRef} from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import Toast from 'react-native-toast-message'
 import { useNavigation } from "@react-navigation/native";
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Reanimated, { SharedValue, useAnimatedStyle } from "react-native-reanimated";
@@ -26,7 +27,11 @@ const SpellItem = ({ item }) => {
     
       try {
         if (item.characterClass !== selectedCharacter.characterClass) {
-          Alert.alert("Spell not added, check Character class");
+          Toast.show({
+            type: 'error',
+            text1: 'Spell not added, check Character class',
+            visibilityTime: 3000
+          })
           return;
         }
     
@@ -34,15 +39,22 @@ const SpellItem = ({ item }) => {
         const response = await dispatch(handleAddSpell({ spellbookId, spellId }));
     
         if (response.type === 'spellbook/addSpell/fulfilled') {
-          Alert.alert('Spell successfully added to Spellbook');
+          Toast.show({
+            type: 'success',
+            text1: 'Spell successfully added to Spellbook',
+            visibilityTime: 3000
+          })
           swipeableRef.current?.close()
         } else {
-          Alert.alert('Failed to add spell');
+          Toast.show({
+            type: 'error',
+            text1: 'Failed to add spell',
+            visibilityTime: 3000
+          })
           swipeableRef.current?.close()
         }
       } catch (err) {
         console.error("Error adding spell to spellbook:", err);
-        Alert.alert("An error occurred while adding the spell.");
       }
     };
     

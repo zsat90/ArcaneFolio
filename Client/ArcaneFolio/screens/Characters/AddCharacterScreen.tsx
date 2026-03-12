@@ -121,7 +121,7 @@ const AddCharacter: React.FC<AddCharacterScreenProps> = ({ navigation }) => {
             mode="contained"
             onPress={handleAddCharacter}
           >
-            Add Character
+            <Text style={styles.buttonText}>Add Character</Text>
           </Buttons>
         </View>
       </ScrollView>
@@ -182,6 +182,10 @@ const styles = StyleSheet.create({
     marginTop: 40,
     marginBottom: 20,
   },
+
+  buttonText: {
+    fontSize: 18
+  }
 });
 
 export default AddCharacter;

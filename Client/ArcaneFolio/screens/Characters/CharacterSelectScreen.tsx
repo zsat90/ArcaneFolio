@@ -25,16 +25,6 @@ const CharacterSelectScreen: React.FC<CharacterSelectScreenProps> = ({navigation
     dispatch(fetchUserCharacters())
   }, [dispatch]);
 
-  // Handle selection of character
-  const handleCharacterSelect = (character: Character) => {
-    dispatch(selectCharacter(character));
-    navigation.navigate('Dashboard', {selectCharacter: character})
-  }
-
-  // function to remove characters from list when deleted.
-  const removeCharacter = (id: number) => {
-    
-  }
 
   return (
     <ImageBackgroundWrapper>

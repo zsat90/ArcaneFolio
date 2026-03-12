@@ -1,5 +1,5 @@
 import React from "react";
-import Icon from "react-native-vector-icons/MaterialIcons";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import SpellScreen from "../../screens/DashboardScreens/SpellsScreen";
 import SpellBookScreen from "../../screens/DashboardScreens/SpellBookScreen";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -22,10 +22,10 @@ const Navbar = () => {
       }}
     >
       <Tab.Screen
-        name="Spell Book"
+        name="SpellBook"
         component={SpellBookScreen}
         options={{
-          tabBarIcon: () => <Icon name="book" color={"#A9FFF7"} size={25} />,
+          tabBarIcon: () => <Icon name="book-open-page-variant" color={"#A9FFF7"} size={25} />,
         }}
       />
 
@@ -35,7 +35,7 @@ const Navbar = () => {
       options={{
         unmountOnBlur: true,
         tabBarIcon: () => (
-          <Icon name="library-books" color={"#A9FFF7"} size={25} />
+          <Icon name="book" color={"#A9FFF7"} size={25} />
         ),
       }}
       />
@@ -45,7 +45,7 @@ const Navbar = () => {
         options={{
           unmountOnBlur: true,
           tabBarIcon: () => (
-            <Icon name="library-books" color={"#A9FFF7"} size={25} />
+            <Icon name="book" color={"#A9FFF7"} size={25} />
           ),
         }}
       />

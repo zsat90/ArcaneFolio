@@ -3,6 +3,7 @@ import axiosInstance from "../../utils/axiosInstance";
 import API_ENDPOINTS from "../../utils/apiConfig";
 import * as SecureStore from "expo-secure-store";
 import { CharacterParams } from '../../utils/Character/characterTypes';
+import Toast from 'react-native-toast-message'
 
 // Utility to get the token
 const getToken = async () => {
@@ -140,10 +141,21 @@ export const resetMagicPoints = createAsyncThunk(
       const response = await axiosInstance.put(endpoint);
 
       if (response.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Magic Points Reset',
+          visibilityTime: 3000
+        })
         return { characterId, magicPoints: response.data.magicPoints };
       }
       throw new Error("Failed to reset magic points");
     } catch (error: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to reset magic points',
+        text2: error.message,
+        visibilityTime: 3000
+      })
       return rejectWithValue(error.message);
     }
   }
@@ -161,10 +173,21 @@ export const addMagicPoints = createAsyncThunk(
       const response = await axiosInstance.put(endpoint, { magicPoints });
 
       if (response.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Magic Points Added',
+          visibilityTime: 3000
+        })
         return { characterId, magicPoints: response.data.magicPoints };
       }
       throw new Error("Failed to add magic points");
     } catch (error: any) {
+      Toast.show({
+        type: "error",
+        text1: "Failed to Add Magic Points",
+        text2: error.message,
+        visibilityTime: 3000,
+      });
       return rejectWithValue(error.message);
     }
   }

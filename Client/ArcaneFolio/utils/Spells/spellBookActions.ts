@@ -1,5 +1,5 @@
 
-import { Alert } from "react-native";
+import Toast from 'react-native-toast-message'
 
 
 type Spell = {
@@ -15,13 +15,21 @@ export const castSpell = async (
   const { magicPointCost } = spell;
 
   if (currentMagicPoints < magicPointCost) {
-    Alert.alert("Not enough Magic Points to cast spell");
+    Toast.show({
+      type: 'error',
+      text1: 'Not enough Magic Points to cast spell',
+      visibilityTime: 3000
+    })
     return currentMagicPoints;
   }
 
   const updatedMagicPoints = currentMagicPoints - magicPointCost;
 
-  Alert.alert("Spell Cast");
+  Toast.show({
+    type: 'success',
+    text1: 'Spell Cast',
+    visibilityTime: 3000
+  })
   return updatedMagicPoints;
 };
 
