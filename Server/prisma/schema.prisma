@@ -4,6 +4,7 @@
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -41,13 +42,15 @@ model Character {
 model Spell {
   id                 Int @id @default(autoincrement())
   characterClass     String
+  spheres            String[]
+  schools            String[]
   name               String
   level              Int
   components         String[]
   range              String
   areaOfEffect       String
   save               String
-  castingTime        Int
+  castingTime        String
   magicPointCost     Int
   duration           String
   description        String

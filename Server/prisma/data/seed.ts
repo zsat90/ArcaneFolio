@@ -1,31 +1,63 @@
 import { PrismaClient } from "@prisma/client";
-import * as fs from 'fs'
-import * as path from 'path'
+import * as fs from "fs";
+import * as path from "path";
 
-// To seed db run npx prisma db seed
+const prisma = new PrismaClient();
 
+// Optional: normalize spacing/capitalization slightly
+function normalizeText(value: string): string {
+  return value.trim().replace(/\s+/g, " ");
+}
 
-const prisma = new PrismaClient()
-
-// function to add spells from the json file to the db
 async function main() {
-    // Load spells from the json file
-    const spellFilePath = path.resolve(__dirname, 'spells.json')
-    const data = fs.readFileSync(spellFilePath, 'utf-8')
-    const spells = JSON.parse(data)
+  const spellFilePath = path.resolve(__dirname, "spells.json");
+  const data = fs.readFileSync(spellFilePath, "utf-8");
+  const rawSpells = JSON.parse(data);
 
-    await prisma.spell.createMany({
-        data: spells
-    })
+  const spells = rawSpells.map((s: any) => ({
+    name: s.name,
+    level: s.level ?? 0,
 
-    console.log('Spells added correctly')
+    components: s.components ?? [],
+    range: s.range ?? "",
+    areaOfEffect: s.areaOfEffect ?? "",
+    save: s.save ?? "",
+
+    castingTime: s.castingTime?.toString() ?? "",
+    duration: s.duration ?? "",
+    description: s.description ?? "",
+
+    magicPointCost: s.magicPointCost ?? 0,
+    characterClass: s.characterClass ?? "Wizard",
+
+    // ✅ Flexible multi-school support (string[])
+    schools: s.schools
+      ? s.schools.map((sch: string) => normalizeText(sch))
+      : s.school
+        ? s.school.split(",").map((sch: string) => normalizeText(sch))
+        : [],
+
+    // ✅ Always an array
+    spheres: s.spheres ?? [],
+
+    spellbookId: s.spellbookId ?? null,
+  }));
+
+  // 🔥 Optional but recommended (prevents duplicates)
+  await prisma.spell.deleteMany();
+
+  await prisma.spell.createMany({
+    data: spells,
+  });
+
+  console.log("✅ Spells seeded successfully");
 }
 
 main()
-.catch(e => {
-    console.error(e)
-    process.exit(1)
-})
-.finally(async () => {
-    await prisma.$disconnect()
-})
+  .catch((e) => {
+    console.error("❌ Seed failed:", e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

@@ -28,6 +28,26 @@ export class SpellsController {
     
   }
 
+  @Get('school/:school')
+  async getSpellsBySchool(
+    @Param('school') school: string
+  ) {
+    if (!school || !school.trim()) {
+      return [];
+    }
+  
+    return await this.spellService.getSpellsBySchool(
+      school.trim()
+    );
+  }
+
+  @Get('sphere/:sphere')
+  async getSpellsBySphere(
+    @Param('sphere') sphere: string
+  ) {
+    return await this.spellService.getSpellsBySphere(sphere)
+  }
+
   @Post(':spellbookId/add-spell')
   async addSpellToSpellbook(
     @Param('spellbookId', ParseIntPipe) spellbookId: number,

@@ -16,4 +16,12 @@ export class FilterSpellsDto {
   @IsOptional()
   @IsString()
   characterClass?: string
+
+  @IsOptional()
+  @IsString()
+  school?: string
+
+  @IsOptional()
+  @IsString()
+  sphere?: string
 }

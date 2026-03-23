@@ -116,6 +116,43 @@ export class SpellsService {
 
   }
 
+  async getSpellsBySchool(school: string) {
+    try {
+      return await this.prisma.spell.findMany({
+        where: {
+          schools: {
+            hasSome: [school],
+          },
+        },
+        orderBy: [
+          { name: 'asc' },
+          { level: 'asc' },
+        ],
+      });
+    } catch (err) {
+      console.error(err);
+      throw new InternalServerErrorException(err);
+    }
+  }
+
+  async getSpellsBySphere(sphere: string) {
+    try {
+      return await this.prisma.spell.findMany({
+        where: {
+          spheres: {
+            hasSome: [sphere],
+          }
+        },
+        orderBy: [
+          { name: 'asc' },
+          { level: 'asc' },
+        ],
+      });
+    } catch (err) {
+      throw new InternalServerErrorException(err);
+    }
+  }
+
   async addSpellToSpellbook(spellbookId: number, spellId: number) {
     try {
       const spellbook = await this.prisma.spellbook.findUnique({
