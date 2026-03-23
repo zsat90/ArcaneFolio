@@ -100,3 +100,24 @@ export const getSpellsByClass = async(characterClass: string) => {
     }
 }
 
+export const getSpellsBySchool = async(school: string) => {
+    try{
+        const response = await axiosInstance.get(`${API_ENDPOINTS.SPELLS}/school/${school}`)
+        if(!response) throw new Error('Failed to get spells')
+        return await response.data
+
+    }catch(err){
+        throw new Error(err)
+    }
+}
+
+export const getSpellsBySphere = async(sphere: string) => {
+    try{
+        const response = await axiosInstance.get(`${API_ENDPOINTS.SPELLS}/sphere/${sphere}`)
+        if(!response) throw new Error('Failed to get spells')
+        return await response.data
+
+    }catch(err){
+        throw new Error(err)
+    }
+}   

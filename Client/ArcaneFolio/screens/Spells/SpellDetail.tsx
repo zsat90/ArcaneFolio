@@ -9,9 +9,15 @@ const SpellDetails = ({ route }) => {
     
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.spellName}>{spell.name}</Text>
+        <Text style={styles.schoolName}>[{spell.schools}]</Text>
 
         <View style={styles.infoContainer}>
           <Text style={styles.text}>Level: {spell.level}</Text>
+        </View>
+        <View style={styles.separator} />
+
+        <View style={styles.infoContainer}>
+          <Text style={styles.text}>Sphere: {spell.sphere}</Text>
         </View>
         <View style={styles.separator} />
 
@@ -67,6 +73,12 @@ const styles = StyleSheet.create({
 
   spellName: {
     fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+
+  schoolName: {
+    fontSize: 18,
     fontWeight: "bold",
     marginBottom: 10,
   },

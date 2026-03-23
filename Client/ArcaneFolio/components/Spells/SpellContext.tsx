@@ -9,10 +9,12 @@ interface Spell {
     range: string;
     areaOfEffect: string;
     save: string;
-    castingTime: number;
+    castingTime: string;
     magicPointCost: number;
     duration: string;
     description: string;
+    school?: string;
+    sphere?: string | null;
 }
 
 interface Spellbook {
