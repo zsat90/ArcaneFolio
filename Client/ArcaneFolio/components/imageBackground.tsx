@@ -1,26 +1,21 @@
 import React from 'react';
-import { ImageBackground, StyleSheet } from 'react-native';
 
-const ImageBackgroundWrapper = ({ children }) => {
-  return (
-    <ImageBackground
-      source={require('../assets/images/wizard.webp')}
-      style={styles.background}
-      imageStyle={{ opacity: 0.2 }}
-      resizeMode="cover" 
-      
-    >
-      
-        {children}
-      
-    </ImageBackground>
-  );
+type Props = {
+  children: React.ReactNode;
 };
 
-const styles = StyleSheet.create({
-    background: {
-      flex: 1,
-    },
-});
+const ImageBackgroundWrapper = ({ children }: Props) => {
+  return (
+    <div
+      style={{
+        minHeight: '100vh',
+        backgroundColor: '#0B1120',
+        position: 'relative',
+      }}
+    >
+      <div style={{ position: 'relative' }}>{children}</div>
+    </div>
+  );
+};
 
 export default ImageBackgroundWrapper;

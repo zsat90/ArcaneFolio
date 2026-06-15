@@ -43,8 +43,14 @@ async function main() {
     spellbookId: s.spellbookId ?? null,
   }));
 
-  // 🔥 Optional but recommended (prevents duplicates)
-  await prisma.spell.deleteMany();
+  // 🔥 Previously this unconditionally deleted all spells before seeding.
+  // Removing unconditional deletion prevents accidental data loss.
+  // If you still want to reset the spells table during a seed, set
+  // the environment variable SEED_RESET=true when running the seed.
+  if (process.env.SEED_RESET === 'true') {
+    console.log('⚠️ SEED_RESET=true — clearing spells table before seeding');
+    await prisma.spell.deleteMany();
+  }
 
   await prisma.spell.createMany({
     data: spells,

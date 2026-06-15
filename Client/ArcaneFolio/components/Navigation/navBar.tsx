@@ -1,56 +1,13 @@
-import React from "react";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import SpellScreen from "../../screens/DashboardScreens/SpellsScreen";
-import SpellBookScreen from "../../screens/DashboardScreens/SpellBookScreen";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import React from 'react';
+import Link from 'next/link';
 
-const Tab = createBottomTabNavigator();
-
-const Navbar = () => {
+const NavBar = () => {
   return (
-    <Tab.Navigator
-      screenOptions={{
-        tabBarStyle: {
-          height: 85,
-          backgroundColor: "#231F20",
-          opacity: 0.9,
-          paddingTop: 5,
-        },
-        tabBarLabelStyle: { fontSize: 18, color: "white" },
-        headerShown: false,
-        tabBarActiveBackgroundColor: "#4A6FA5",
-      }}
-    >
-      <Tab.Screen
-        name="SpellBook"
-        component={SpellBookScreen}
-        options={{
-          tabBarIcon: () => <Icon name="book-open-page-variant" color={"#A9FFF7"} size={25} />,
-        }}
-      />
-
-      <Tab.Screen
-      name="Wizard Spells"
-      children={() => <SpellScreen characterClass='Wizard'/>}
-      options={{
-        unmountOnBlur: true,
-        tabBarIcon: () => (
-          <Icon name="book" color={"#A9FFF7"} size={25} />
-        ),
-      }}
-      />
-      <Tab.Screen
-        name="Priest Spells"
-        children={() => <SpellScreen characterClass='Cleric'/>}
-        options={{
-          unmountOnBlur: true,
-          tabBarIcon: () => (
-            <Icon name="book" color={"#A9FFF7"} size={25} />
-          ),
-        }}
-      />
-    </Tab.Navigator>
+    <nav style={{ display: 'flex', gap: 16, justifyContent: 'center', padding: 12, backgroundColor: '#231F20' }}>
+      <Link href="/dashboard/spells" legacyBehavior><a style={{ color: '#A9FFF7', textDecoration: 'none' }}>Spells</a></Link>
+      <Link href="/dashboard/spellbook" legacyBehavior><a style={{ color: '#A9FFF7', textDecoration: 'none' }}>Spell Book</a></Link>
+    </nav>
   );
 };
 
-export default Navbar;
+export default NavBar;

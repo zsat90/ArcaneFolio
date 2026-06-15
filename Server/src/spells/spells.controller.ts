@@ -16,16 +16,11 @@ export class SpellsController {
   constructor(private readonly spellService: SpellsService) {}
 
   @Get()
-  async getAllSpells() {
-    return await this.spellService.getAllSpells();
-  }
-
-  @Get(':characterClass')
-    async getSpellsByClass(
-      @Param('characterClass') characterClass: string
-    ) {
-      return await this.spellService.getSpellsByClass(characterClass)
-    
+  async getAllSpells(@Query() filterSpellsDto: FilterSpellsDto) {
+    if(filterSpellsDto.level !== undefined) {
+        filterSpellsDto.level = parseInt(filterSpellsDto.level as unknown as string, 10)
+    }
+    return await this.spellService.getAllSpells(filterSpellsDto);
   }
 
   @Get('school/:school')
@@ -73,13 +68,21 @@ export class SpellsController {
   async filterSpells(
     @Param('characterClass') characterClass: string,
     @Query() filterSpellsDto: FilterSpellsDto) {
-    if(filterSpellsDto.level) {
+    if(filterSpellsDto.level !== undefined) {
         filterSpellsDto.level = parseInt(filterSpellsDto.level as unknown as string, 10)
     }
     if(filterSpellsDto.spellbookId) {
       filterSpellsDto.spellbookId = parseInt(filterSpellsDto.spellbookId as unknown as string, 10)
     }
     return this.spellService.filterSpells(characterClass, filterSpellsDto);
+  }
+
+  @Get(':characterClass')
+    async getSpellsByClass(
+      @Param('characterClass') characterClass: string
+    ) {
+      return await this.spellService.getSpellsByClass(characterClass)
+    
   }
 
 }

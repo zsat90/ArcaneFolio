@@ -1,33 +1,27 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import { DrawerNavigationProp } from '@react-navigation/drawer';
 import Logo from '../components/Login/Logo'
 
-
 type HeaderProps = {
-    navigation: DrawerNavigationProp<any>; 
+    onMenuClick?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ navigation }) => {
-
+const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
     return (
-        <View style={styles.headerContainer}>
-            <TouchableOpacity onPress={() => navigation.toggleDrawer()}>
-                <Icon name="menu" size={30} color="white" />
-            </TouchableOpacity>
-            <View style={styles.titleContainer}>
-            <Logo />
-            <Text style={styles.headerText}>Arcane Folio</Text>
-            </View>
-            
-        </View>
+        <header style={styles.headerContainer}>
+            <button type="button" onClick={onMenuClick} aria-label="Open menu" style={styles.menuButton}>
+                Menu
+            </button>
+            <div style={styles.titleContainer}>
+                <Logo />
+                <span style={styles.headerText}>Arcane Folio</span>
+            </div>
+        </header>
     );
 };
 
-const styles = StyleSheet.create({
+const styles: Record<string, React.CSSProperties> = {
     headerContainer: {
-        flexDirection: 'row',
+        display: 'flex',
         alignItems: 'center',
         padding: 5,
         backgroundColor: '#231F20',
@@ -37,7 +31,7 @@ const styles = StyleSheet.create({
 
     titleContainer: {
         flex: 1,
-        flexDirection: 'row',
+        display: 'flex',
         justifyContent: 'center',
         alignItems: 'center'
 
@@ -49,6 +43,14 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontFamily: 'Courier'
     },
-});
+    menuButton: {
+        background: 'transparent',
+        border: '1px solid rgba(255,255,255,0.35)',
+        borderRadius: 8,
+        color: '#fff',
+        cursor: 'pointer',
+        padding: '8px 10px',
+    },
+};
 
 export default Header;

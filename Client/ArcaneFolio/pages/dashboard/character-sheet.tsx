@@ -1,0 +1,1680 @@
+import React, { ChangeEvent, useEffect, useRef, useState } from 'react';
+import EquipmentListModal from '../../components/Equipment/EquipmentListModal';
+import ImageBackgroundWrapper from '../../components/imageBackground';
+import NavDrawer from '../../components/Navigation/navDrawer';
+import { useRouter } from 'next/router';
+import { useSelectedCharacter } from '../../utils/character/characterState';
+import {
+  CharacterSheetState,
+  NonWeaponProficiencyRow,
+  ProficiencyRow,
+  SavingThrowRow,
+  ThievingSkillRow,
+  WeaponRow,
+  XPAwardRow,
+  createEmptySheet,
+  getCharacterSheet,
+  setCharacterSheet,
+} from '../../utils/character/characterSheetState';
+import {
+  formatExperience,
+  getExperienceDefaults as getClassExperienceDefaults,
+  getHitDieForClass,
+  getLevelOptionsForClass,
+  getLevelTitleForClass,
+  parseExperience,
+  parseLevelTitle,
+} from '../../utils/character/experience';
+import { COIN_FIELDS, deductEquipmentCost } from '../../utils/character/coins';
+import { getEquipmentLinesForCategory, withSelectedEquipmentOption } from '../../utils/character/equipment';
+import { withCalculatedRealArmorClass } from '../../utils/character/armorClass';
+import { withCalculatedTotalHitPoints } from '../../utils/character/hitPoints';
+
+const SHEET_PAGES = ['Page 1', 'Page 2', 'Page 3', 'Page 4', 'Page 5', 'Page 6'];
+const XP_COLUMN_COUNT = 3;
+const RACE_OPTIONS = ['Human', 'Dwarf', 'Elf', 'Half-elf', 'Gnome', 'Halfling'];
+const SOCIAL_CLASS_OPTIONS = ['Lower-lower', 'Lower-middle', 'Middle-middle', 'Upper'];
+const THACO_ARMOR_CLASSES = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, -1, -2, -3, -4, -5, -6, -7, -8, -9, -10];
+const TRACKING_MODIFIER_LABELS = [
+  'Soft or muddy ground',
+  'Thick brush, vines, or reeds',
+  'Occasional signs, dust',
+  'Normal ground, wood floor',
+  'Rocky ground, shallow water',
+  'Every 2 creatures in the group',
+  'Every 12 hrs since trail was made',
+  'Every hour of rain, snow, or sleet',
+  'Poor light (moon, starlight)',
+  'Tracked party attempts to hide trail',
+];
+const TURNING_UNDEAD_LABELS: Array<[string, string]> = [
+  ['Skeleton', 'Skeleton'],
+  ['Zombie', 'Zombie'],
+  ['Ghoul', 'Ghoul'],
+  ['Shadow', 'Shadow'],
+  ['Wight', 'Wight'],
+  ['Ghast', 'Ghast'],
+  ['Wraith', 'Wraith'],
+  ['Mummy', 'Mummy'],
+  ['Spectre', 'Spectre'],
+  ['Vampire', 'Vampire'],
+  ['Ghost', 'Ghost'],
+  ['Litch', 'Litch'],
+  ['Special', 'Special'],
+];
+const THIEVING_SKILL_COLUMNS: Array<[keyof ThievingSkillRow, string]> = [
+  ['skill', 'Skill'],
+  ['base', 'Base'],
+  ['halfElf', 'H/Elf'],
+  ['elf', 'Elf'],
+  ['dwarf', 'Dwarf'],
+  ['gnome', 'Gnome'],
+  ['halfling', 'Halfling'],
+  ['dex', 'Dex'],
+  ['thief', 'Thief'],
+  ['armor', 'Armor'],
+  ['realPercent', 'Real %'],
+];
+const THIEVING_DESCRIPTIONS = [
+  'Thief/Rogue: begins with 90 points to allocate at character creation, then gains 30 additional points each level after 1st.',
+  'Bard: begins with 60 points to allocate at character creation, then gains 30 additional points each level after 1st.',
+];
+const SAVING_THROW_RULES = [
+  'Constitution Chart: 4-6 +1, 7-10 +2, 11-13 +3, 14-17 +4, 18-19 +5.',
+  'Dwarves get bonuses on Rods, Staves, Wands, and Poison saves. See Constitution Chart above.',
+  'Elves are 90% resistant to Sleep and Charm. If the percentage roll is missed, roll the regular save.',
+  'Gnomes receive bonuses on Rods, Staves, Wands, and all spells. See Constitution Chart above.',
+  'Halflings get bonuses on Rods, Staves, Wands, Poisons, and all spells. See Constitution Chart above.',
+  'Strength: hit adjustment applies to save vs Web.',
+  'Dexterity: defense adjustment applies to Attack Spells, Rods, Staves, Wands, and Breath.',
+  'Constitution: poison save applies to all Poison saves.',
+  'Intelligence: spell immunity applies to Illusions.',
+  'Wisdom: magical defense adjustment applies to Mind Spells, Charm, Fear, Illusions, and Sleep.',
+  'Charisma: reaction adjustment applies to Charm.',
+  'Roll equal to or greater than Real. Once Saving Throw is made 4 times, the Real goes down by one.',
+];
+const STARTING_EQUIPMENT = [
+  '2 Pair Linen Undergarments',
+  '10ft of Cord',
+  '2 Pair Linen Stockings',
+  '2 Linen Shirts',
+  '1 Leather Belt',
+  '1 Pair Soft High Boots',
+  '1 Woolen Cloak',
+  '1 Pair Woolen Gloves',
+  '1 Bedroll',
+  '1 Pewter Plate, Bowl, Cup',
+  '1 Small Iron Cooking Pot',
+  '1 Hairbrush',
+  '1 Fire-Starting Bow',
+  '50ft Fishing Line',
+  'Flint and Steel',
+  '3 Bone Sewing Needles',
+  '2 Small Leather Pouches',
+  '1 Pair of Scissors',
+  '2lbs of Soap',
+  '7 Days of Trail Rations',
+  '1 Pair Woolen Stockings',
+  '5 Fishing Hooks',
+  '1 Pair Doeskin Breeches',
+  '1 Hooded Lantern',
+  '1 Pair Linen Breeches',
+  '1 Pint Lantern Oil',
+  '1 Good Cloth Cloak',
+  '1 50ft Spool of Thread',
+  '1 Pair Leather Gloves',
+  '50ft Hemp Rope',
+  '1 Linen Nightshirt',
+  '1 3 Pint Waterskin',
+  '1 Woolen Blanket',
+  '1 Whetstone',
+  '1 Set of Cutlery',
+  '2 Sticks of Chalk',
+  '1 Waterproof Backpack',
+];
+const WEAPON_FIELDS: Array<keyof WeaponRow> = [
+  'weapon',
+  'wac',
+  'thacoWeaponBonus',
+  'thacoStrengthBonus',
+  'thacoSpecialization',
+  'thacoReal',
+  'speedBase',
+  'speedReactionAdj',
+  'speedWeaponBonus',
+  'speedReal',
+  'damageSmallMedium',
+  'damageLarge',
+  'damageWeaponBonus',
+  'damageStrengthBonus',
+  'damageSpecialization',
+  'damageReal',
+];
+const SAVING_THROW_CHECK_FIELDS: Array<keyof SavingThrowRow> = ['check1', 'check2', 'check3', 'check4'];
+
+const getXPAwardTotal = (rows: XPAwardRow[]) => (
+  rows.reduce((total, row) => total + (parseExperience(row.xp) ?? 0), 0)
+);
+
+const getThacoTarget = (realThaco: string, armorClass: number) => {
+  const thaco = Number(realThaco);
+
+  if (!Number.isFinite(thaco)) {
+    return '';
+  }
+
+  return String(thaco - armorClass);
+};
+
+const getSavingThrowReductionSummary = (currentSheet: CharacterSheetState) => {
+  return currentSheet.savingThrowDetails['Automatic Immunities'] || '';
+};
+
+const createWeaponRow = (index: number): WeaponRow => ({
+  id: `weapon-${Date.now()}-${index}`,
+  weapon: '',
+  wac: '',
+  thacoWeaponBonus: '',
+  thacoStrengthBonus: '',
+  thacoSpecialization: '',
+  thacoReal: '',
+  speedBase: '',
+  speedReactionAdj: '',
+  speedWeaponBonus: '',
+  speedReal: '',
+  damageSmallMedium: '',
+  damageLarge: '',
+  damageWeaponBonus: '',
+  damageStrengthBonus: '',
+  damageSpecialization: '',
+  damageReal: '',
+});
+
+const createProficiencyRow = (prefix: string, index: number): ProficiencyRow => ({
+  id: `${prefix}-${Date.now()}-${index}`,
+  name: '',
+  slots: '',
+});
+
+const createNonWeaponProficiencyRow = (index: number): NonWeaponProficiencyRow => ({
+  id: `non-weapon-proficiency-${Date.now()}-${index}`,
+  name: '',
+  slots: '',
+  attribute: '',
+  attributeMod: '',
+});
+
+const createXPAwardRow = (index: number): XPAwardRow => ({
+  id: `xp-award-${Date.now()}-${index}`,
+  xp: '',
+});
+
+export default function CharacterSheetPage() {
+  const router = useRouter();
+  const selectedCharacter = useSelectedCharacter();
+  const [sheet, setSheet] = useState<CharacterSheetState>(() => createEmptySheet());
+  const [saveState, setSaveState] = useState('Saved');
+  const [activePage, setActivePage] = useState('Page 1');
+  const [isEquipmentModalOpen, setIsEquipmentModalOpen] = useState(false);
+  const lastLevelUpAlertKey = useRef('');
+
+  const sheetKey = selectedCharacter ? String(selectedCharacter.id) : '';
+  const characterName = selectedCharacter?.name || 'No Character Selected';
+  const characterClass = selectedCharacter?.characterClass || selectedCharacter?.class || '';
+  const characterLevel = selectedCharacter?.level ? String(selectedCharacter.level) : '';
+  const classLevelOptions = getLevelOptionsForClass(characterClass);
+  const maxClassLevel = classLevelOptions[classLevelOptions.length - 1] ?? 20;
+  const armorTypeOptions = withSelectedEquipmentOption(getEquipmentLinesForCategory(sheet.equipmentDetails, 'Armor'), sheet.armorDetails['Armor Type']);
+  const helmOptions = withSelectedEquipmentOption(getEquipmentLinesForCategory(sheet.equipmentDetails, 'Helms'), sheet.armorDetails.Helm);
+  const shieldOptions = withSelectedEquipmentOption(getEquipmentLinesForCategory(sheet.equipmentDetails, 'Shields'), sheet.armorDetails.Shield);
+  const xpAwardTotal = getXPAwardTotal(sheet.xpAwardRows);
+  const currentXP = parseExperience(sheet.experienceDetails.Current);
+  const nextXPTarget = parseExperience(sheet.experienceDetails['Next XP Target']);
+  const hasLeveledUp = currentXP !== null && nextXPTarget !== null && currentXP >= nextXPTarget;
+
+  useEffect(() => {
+    if (!sheetKey) {
+      setSheet(createEmptySheet());
+      return;
+    }
+
+    setSheet(getCharacterSheet(Number(sheetKey)));
+  }, [sheetKey]);
+
+  useEffect(() => {
+    if (!sheetKey) {
+      return;
+    }
+
+    setCharacterSheet(Number(sheetKey), sheet);
+    setSaveState('Saved');
+  }, [sheet, sheetKey]);
+
+  useEffect(() => {
+    if (!hasLeveledUp || nextXPTarget === null) {
+      return;
+    }
+
+    const alertKey = `${sheetKey}-${nextXPTarget}`;
+
+    if (lastLevelUpAlertKey.current === alertKey) {
+      return;
+    }
+
+    lastLevelUpAlertKey.current = alertKey;
+    window.alert(`${characterName} leveled up.`);
+  }, [characterName, hasLeveledUp, nextXPTarget, sheetKey]);
+
+  const updateSheetField = (field: keyof CharacterSheetState) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const value = event.target.value;
+    setSaveState('Saving');
+
+    if (field === 'levelTitle') {
+      const parsedLevel = parseLevelTitle(value);
+      const levelTitle = getLevelTitleForClass(characterClass, parsedLevel);
+
+      setSheet((currentSheet) => ({
+        ...currentSheet,
+        levelTitle,
+        experienceDetails: {
+          ...currentSheet.experienceDetails,
+          ...getClassExperienceDefaults(characterClass, parsedLevel),
+        },
+        hitPointDetails: {
+          ...withCalculatedTotalHitPoints({
+            ...currentSheet.hitPointDetails,
+            'Per Level': getHitDieForClass(characterClass),
+          }),
+        },
+      }));
+
+      return;
+    }
+
+    setSheet((currentSheet) => ({ ...currentSheet, [field]: value }));
+  };
+
+  const updateSheetRecordField = (
+    section: 'abilityDetails' | 'combatDetails' | 'experienceDetails' | 'hitPointDetails' | 'armorDetails' | 'proficiencyDetails' | 'trackingModifiers' | 'turningUndead' | 'savingThrowDetails' | 'equipmentDetails',
+    field: string,
+  ) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const value = event.target.value;
+    setSaveState('Saving');
+
+    if (section === 'experienceDetails' && field === 'Current') {
+      setSheet((currentSheet) => ({
+        ...currentSheet,
+        experienceDetails: {
+          ...currentSheet.experienceDetails,
+          Current: value,
+          ...getClassExperienceDefaults(characterClass, parseLevelTitle(currentSheet.levelTitle || characterLevel), value),
+        },
+      }));
+
+      return;
+    }
+
+    if (section === 'hitPointDetails') {
+      setSheet((currentSheet) => ({
+        ...currentSheet,
+        hitPointDetails: withCalculatedTotalHitPoints({
+          ...currentSheet.hitPointDetails,
+          [field]: value,
+        }),
+      }));
+
+      return;
+    }
+
+    if (section === 'armorDetails') {
+      setSheet((currentSheet) => ({
+        ...currentSheet,
+        armorDetails: withCalculatedRealArmorClass({
+          ...currentSheet.armorDetails,
+          [field]: value,
+        }),
+      }));
+
+      return;
+    }
+
+    setSheet((currentSheet) => ({
+      ...currentSheet,
+      [section]: {
+        ...currentSheet[section],
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleEquipLine = (itemLine: string, _itemName: string, equipmentBucket = 'Other', itemCost = '') => {
+    const deduction = deductEquipmentCost(sheet.equipmentDetails, itemCost);
+
+    if (deduction.insufficientFunds) {
+      return 'Not enough coins for that purchase.';
+    }
+
+    setSaveState('Saving');
+    setSheet((currentSheet) => {
+      const currentEquipment = deduction.equipmentDetails[equipmentBucket]?.trim();
+
+      return {
+        ...currentSheet,
+        equipmentDetails: {
+          ...deduction.equipmentDetails,
+          [equipmentBucket]: currentEquipment ? `${currentEquipment}\n${itemLine}` : itemLine,
+        },
+      };
+    });
+  };
+
+  const getEquipmentBucketLines = (field: string) => (sheet.equipmentDetails[field] ?? '').split('\n');
+
+  const updateEquipmentBucketLine = (field: string, rowIndex: number) => (event: ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setSaveState('Saving');
+
+    setSheet((currentSheet) => {
+      const lines = (currentSheet.equipmentDetails[field] ?? '').split('\n');
+      lines[rowIndex] = value;
+
+      return {
+        ...currentSheet,
+        equipmentDetails: {
+          ...currentSheet.equipmentDetails,
+          [field]: lines.join('\n'),
+        },
+      };
+    });
+  };
+
+  const addEquipmentBucketLine = (field: string) => {
+    setSaveState('Saving');
+    setSheet((currentSheet) => {
+      const currentEquipment = currentSheet.equipmentDetails[field] ?? '';
+
+      return {
+        ...currentSheet,
+        equipmentDetails: {
+          ...currentSheet.equipmentDetails,
+          [field]: currentEquipment ? `${currentEquipment}\n` : '\n',
+        },
+      };
+    });
+  };
+
+  const updateWeaponRow = (rowIndex: number, field: keyof WeaponRow) => (event: ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setSaveState('Saving');
+    setSheet((currentSheet) => ({
+      ...currentSheet,
+      weaponRows: currentSheet.weaponRows.map((row, index) => index === rowIndex ? { ...row, [field]: value } : row),
+    }));
+  };
+
+  const updateProficiencyRow = (section: 'weaponProficiencies' | 'nonWeaponProficiencies', rowIndex: number, field: keyof ProficiencyRow | keyof NonWeaponProficiencyRow) => (event: ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setSaveState('Saving');
+    setSheet((currentSheet) => ({
+      ...currentSheet,
+      [section]: currentSheet[section].map((row, index) => index === rowIndex ? { ...row, [field]: value } : row),
+    }));
+  };
+
+  const updateThievingSkillRow = (rowIndex: number, field: keyof ThievingSkillRow) => (event: ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setSaveState('Saving');
+    setSheet((currentSheet) => ({
+      ...currentSheet,
+      thievingSkills: currentSheet.thievingSkills.map((row, index) => index === rowIndex ? { ...row, [field]: value } : row),
+    }));
+  };
+
+  const updateSavingThrowRow = (rowIndex: number, field: keyof SavingThrowRow) => (event: ChangeEvent<HTMLInputElement>) => {
+    const value = field.startsWith('check') ? event.target.checked : event.target.value;
+    setSaveState('Saving');
+    setSheet((currentSheet) => ({
+      ...currentSheet,
+      savingThrowRows: currentSheet.savingThrowRows.map((row, index) => index === rowIndex ? { ...row, [field]: value } : row),
+    }));
+  };
+
+  const updateXPAwardRow = (rowIndex: number) => (event: ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setSaveState('Saving');
+    setSheet((currentSheet) => {
+      const previousXP = parseExperience(currentSheet.xpAwardRows[rowIndex]?.xp ?? '') ?? 0;
+      const nextXP = parseExperience(value) ?? 0;
+      const current = parseExperience(currentSheet.experienceDetails.Current) ?? 0;
+      const nextCurrent = Math.max(current + nextXP - previousXP, 0);
+      const levelValue = parseLevelTitle(currentSheet.levelTitle || characterLevel);
+
+      return {
+        ...currentSheet,
+        experienceDetails: {
+          ...currentSheet.experienceDetails,
+          Current: formatExperience(nextCurrent),
+          ...getClassExperienceDefaults(characterClass, levelValue, formatExperience(nextCurrent)),
+        },
+        xpAwardRows: currentSheet.xpAwardRows.map((row, index) => index === rowIndex ? { ...row, xp: value } : row),
+      };
+    });
+  };
+
+  const addWeaponLine = () => {
+    setSaveState('Saving');
+    setSheet((currentSheet) => ({
+      ...currentSheet,
+      weaponRows: [...currentSheet.weaponRows, createWeaponRow(currentSheet.weaponRows.length + 1)],
+    }));
+  };
+
+  const addWeaponProficiencyLine = () => {
+    setSaveState('Saving');
+    setSheet((currentSheet) => ({
+      ...currentSheet,
+      weaponProficiencies: [...currentSheet.weaponProficiencies, createProficiencyRow('weapon-proficiency', currentSheet.weaponProficiencies.length + 1)],
+    }));
+  };
+
+  const addNonWeaponProficiencyLine = () => {
+    setSaveState('Saving');
+    setSheet((currentSheet) => ({
+      ...currentSheet,
+      nonWeaponProficiencies: [...currentSheet.nonWeaponProficiencies, createNonWeaponProficiencyRow(currentSheet.nonWeaponProficiencies.length + 1)],
+    }));
+  };
+
+  const addXPAwardLine = () => {
+    setSaveState('Saving');
+    setSheet((currentSheet) => ({
+      ...currentSheet,
+      xpAwardRows: [...currentSheet.xpAwardRows, createXPAwardRow(currentSheet.xpAwardRows.length + 1)],
+    }));
+  };
+
+  // sheet reset intentionally removed to match Add Character layout
+
+  return (
+    <ImageBackgroundWrapper>
+      <main style={styles.page}>
+        <NavDrawer />
+
+        <div style={styles.headerRow}>
+          <div>
+            <h1 style={styles.title}>Character Sheet</h1>
+          </div>
+          <button type="button" onClick={() => router.push('/characters')} style={styles.backButton}>Back</button>
+        </div>
+
+        <section style={styles.sheet}>
+          <div style={styles.sheetHeader}>
+            <h2 style={styles.sheetTitle}>Trueshield Games Player Character Sheet</h2>
+            <div style={styles.sheetTabs}>
+              {SHEET_PAGES.map((page) => (
+                <button
+                  key={page}
+                  type="button"
+                  onClick={() => setActivePage(page)}
+                  style={{ ...styles.sheetTab, ...(activePage === page ? styles.sheetTabActive : {}) }}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {activePage === 'Page 1' && (
+            <>
+              <div style={styles.lineGrid}>
+                <label style={styles.lineField}><span style={styles.lineLabel}>Character Name:</span><input readOnly value={characterName} style={styles.lineInput} /></label>
+                <label style={styles.lineField}><span style={styles.lineLabel}>Player Name:</span><input value={sheet.playerName} onChange={updateSheetField('playerName')} style={styles.lineInput} /></label>
+                <label style={styles.lineField}><span style={styles.lineLabel}>Character Alias:</span><input value={sheet.characterAlias} onChange={updateSheetField('characterAlias')} style={styles.lineInput} /></label>
+                <label style={styles.lineField}><span style={styles.lineLabel}>Class:</span><input readOnly value={characterClass} style={styles.lineInput} /></label>
+                <label style={styles.lineField}>
+                  <span style={styles.lineLabel}>Race:</span>
+                  <select value={sheet.race} onChange={updateSheetField('race')} style={styles.lineInput}>
+                    <option value="">Select race</option>
+                    {RACE_OPTIONS.map((race) => <option key={race} value={race}>{race}</option>)}
+                  </select>
+                </label>
+                <label style={styles.lineField}><span style={styles.lineLabel}>Alignment:</span><input value={sheet.alignment} onChange={updateSheetField('alignment')} style={styles.lineInput} /></label>
+                <label style={styles.lineField}><span style={styles.lineLabel}>Deity:</span><input value={sheet.deity} onChange={updateSheetField('deity')} style={styles.lineInput} /></label>
+                <label style={styles.lineField}>
+                  <span style={styles.lineLabel}>Level/Title:</span>
+                  <select value={String(Math.min(parseLevelTitle(sheet.levelTitle || characterLevel), maxClassLevel))} onChange={updateSheetField('levelTitle')} style={styles.lineInput}>
+                    {classLevelOptions.map((levelOption) => (
+                      <option key={levelOption} value={levelOption}>
+                        {getLevelTitleForClass(characterClass, levelOption)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label style={styles.lineField}><span style={styles.lineLabel}>Homeland:</span><input value={sheet.homeland} onChange={updateSheetField('homeland')} style={styles.lineInput} /></label>
+              </div>
+              <div style={styles.detailRow}>
+                <label style={styles.socialClassField}>
+                  <span style={styles.lineLabel}>Social Class:</span>
+                  <select value={sheet.socialClass} onChange={updateSheetField('socialClass')} style={styles.lineInput}>
+                    <option value="">Select</option>
+                    {SOCIAL_CLASS_OPTIONS.map((socialClass) => <option key={socialClass} value={socialClass}>{socialClass}</option>)}
+                  </select>
+                </label>
+                <label style={styles.tinyLineField}><span style={styles.lineLabel}>Sex:</span><input value={sheet.sex} onChange={updateSheetField('sex')} style={styles.lineInput} /></label>
+                <label style={styles.tinyLineField}><span style={styles.lineLabel}>Age:</span><input value={sheet.age} onChange={updateSheetField('age')} style={styles.lineInput} /></label>
+                <label style={styles.smallLineField}><span style={styles.lineLabel}>Height:</span><input value={sheet.height} onChange={updateSheetField('height')} style={styles.lineInput} /></label>
+                <label style={styles.smallLineField}><span style={styles.lineLabel}>Weight:</span><input value={sheet.weight} onChange={updateSheetField('weight')} style={styles.lineInput} /></label>
+                <label style={styles.mediumLineField}><span style={styles.lineLabel}>Eyes:</span><input value={sheet.eyes} onChange={updateSheetField('eyes')} style={styles.lineInput} /></label>
+                <label style={styles.mediumLineField}><span style={styles.lineLabel}>Hair:</span><input value={sheet.hair} onChange={updateSheetField('hair')} style={styles.lineInput} /></label>
+              </div>
+              {[
+                ['Languages', 'languages'],
+                ['Racial Bonuses and Abilities', 'racialBonuses'],
+                ['Special Abilities and Restrictions', 'specialAbilities'],
+                ['Notes/History', 'notes'],
+              ].map(([label, key]) => (
+                <label key={key} style={styles.textBlock}>
+                  <span style={styles.lineLabel}>{label}:</span>
+                  <textarea value={sheet[key as keyof CharacterSheetState] as string} onChange={updateSheetField(key as keyof CharacterSheetState)} style={{ ...styles.sheetTextarea, minHeight: key === 'notes' ? 360 : 86 }} />
+                </label>
+              ))}
+            </>
+          )}
+
+          {activePage === 'Page 2' && (
+            <>
+              <div style={styles.sheetSection}>
+                <h3 style={styles.sheetSectionTitle}>Ability Scores</h3>
+                <div style={styles.abilityLine}>
+                  <label style={styles.scoreField}><span style={styles.lineLabel}>Strength:</span><input value={sheet.abilityDetails.Strength} onChange={updateSheetRecordField('abilityDetails', 'Strength')} style={styles.scoreInput} /></label>
+                  {['Hit', 'Dmg', 'Wgt', 'Press', 'Doors', 'Bars/Gates'].map((field) => (
+                    <label key={field} style={styles.modifierField}>
+                      <span style={styles.lineLabel}>{field}:</span>
+                      <input value={sheet.abilityDetails[`Strength ${field}`]} onChange={updateSheetRecordField('abilityDetails', `Strength ${field}`)} style={styles.lineInput} />
+                    </label>
+                  ))}
+                </div>
+                <div style={styles.abilityLine}>
+                  <label style={styles.scoreField}><span style={styles.lineLabel}>Dexterity:</span><input value={sheet.abilityDetails.Dexterity} onChange={updateSheetRecordField('abilityDetails', 'Dexterity')} style={styles.scoreInput} /></label>
+                  <label style={styles.modifierField}><span style={styles.lineLabel}>Reac Adj:</span><input value={sheet.abilityDetails['Dexterity Reac Adj']} onChange={updateSheetRecordField('abilityDetails', 'Dexterity Reac Adj')} style={styles.lineInput} /></label>
+                  <label style={styles.modifierField}><span style={styles.lineLabel}>Msl Att Adj:</span><input value={sheet.abilityDetails['Dexterity Msl Att Adj']} onChange={updateSheetRecordField('abilityDetails', 'Dexterity Msl Att Adj')} style={styles.lineInput} /></label>
+                  <label style={styles.modifierField}><span style={styles.lineLabel}>Def Adj (AC):</span><input value={sheet.abilityDetails['Dexterity Def Adj (AC)']} onChange={updateSheetRecordField('abilityDetails', 'Dexterity Def Adj (AC)')} style={styles.lineInput} /></label>
+                  <label style={styles.modifierField}><span style={styles.lineLabel}>Parry:</span><input value={sheet.abilityDetails['Dexterity Parry']} onChange={updateSheetRecordField('abilityDetails', 'Dexterity Parry')} style={styles.lineInput} /></label>
+                </div>
+                <div style={styles.abilityLine}>
+                  <label style={styles.scoreField}><span style={styles.lineLabel}>Constitution:</span><input value={sheet.abilityDetails.Constitution} onChange={updateSheetRecordField('abilityDetails', 'Constitution')} style={styles.scoreInput} /></label>
+                  {[
+                    ['HP Adj', 'Constitution HP Adj'],
+                    ['Sys Shk', 'Constitution Sys Shk'],
+                    ['Res Sur', 'Constitution Res Sur'],
+                    ['Poison Save', 'Constitution Poison Save'],
+                    ['Regen', 'Constitution Regen'],
+                  ].map(([label, field]) => (
+                    <label key={field} style={styles.modifierField}>
+                      <span style={styles.lineLabel}>{label}:</span>
+                      <input value={sheet.abilityDetails[field]} onChange={updateSheetRecordField('abilityDetails', field)} style={styles.lineInput} />
+                    </label>
+                  ))}
+                </div>
+                <div style={styles.abilityLine}>
+                  <label style={styles.scoreField}><span style={styles.lineLabel}>Intelligence:</span><input value={sheet.abilityDetails.Intelligence} onChange={updateSheetRecordField('abilityDetails', 'Intelligence')} style={styles.scoreInput} /></label>
+                  {[
+                    ['# of Lang', 'Intelligence # of Lang'],
+                    ['Sp Lvl', 'Intelligence Sp Lvl'],
+                    ['Learn Spl', 'Intelligence Learn Spl'],
+                    ['Sp/Lvl', 'Intelligence Sp/Lvl'],
+                    ['Immunity', 'Intelligence Immunity'],
+                  ].map(([label, field]) => (
+                    <label key={field} style={styles.modifierField}>
+                      <span style={styles.lineLabel}>{label}:</span>
+                      <input value={sheet.abilityDetails[field]} onChange={updateSheetRecordField('abilityDetails', field)} style={styles.lineInput} />
+                    </label>
+                  ))}
+                </div>
+                <div style={styles.abilityLine}>
+                  <label style={styles.scoreField}><span style={styles.lineLabel}>Wisdom:</span><input value={sheet.abilityDetails.Wisdom} onChange={updateSheetRecordField('abilityDetails', 'Wisdom')} style={styles.scoreInput} /></label>
+                  {[
+                    ['Magic Defense', 'Wisdom Magic Defense'],
+                    ['Bonus Spells', 'Wisdom Bonus Spells'],
+                    ['% Fail', 'Wisdom % Fail'],
+                    ['Immunity', 'Wisdom Immunity'],
+                  ].map(([label, field]) => (
+                    <label key={field} style={styles.modifierField}>
+                      <span style={styles.lineLabel}>{label}:</span>
+                      <input value={sheet.abilityDetails[field]} onChange={updateSheetRecordField('abilityDetails', field)} style={styles.lineInput} />
+                    </label>
+                  ))}
+                </div>
+                <div style={styles.abilityLine}>
+                  <label style={styles.scoreField}><span style={styles.lineLabel}>Charisma:</span><input value={sheet.abilityDetails.Charisma} onChange={updateSheetRecordField('abilityDetails', 'Charisma')} style={styles.scoreInput} /></label>
+                  <label style={styles.longModifierField}><span style={styles.lineLabel}>Max # Henchman:</span><input value={sheet.abilityDetails['Charisma Max # Henchman']} onChange={updateSheetRecordField('abilityDetails', 'Charisma Max # Henchman')} style={styles.lineInput} /></label>
+                  <label style={styles.longModifierField}><span style={styles.lineLabel}>Loyalty Base:</span><input value={sheet.abilityDetails['Charisma Loyalty Base']} onChange={updateSheetRecordField('abilityDetails', 'Charisma Loyalty Base')} style={styles.lineInput} /></label>
+                  <label style={styles.longModifierField}><span style={styles.lineLabel}>Reaction Adj:</span><input value={sheet.abilityDetails['Charisma Reaction Adj']} onChange={updateSheetRecordField('abilityDetails', 'Charisma Reaction Adj')} style={styles.lineInput} /></label>
+                </div>
+                <div style={styles.comelinessLine}>
+                  <label style={styles.scoreField}><span style={styles.lineLabel}>Comeliness:</span><input value={sheet.abilityDetails.Comeliness} onChange={updateSheetRecordField('abilityDetails', 'Comeliness')} style={styles.scoreInput} /></label>
+                  <p style={styles.inlineNote}>1/6 Ugly, 7/9 Homely, 10/13 Average, 14/17 Above Average, 18/21 Beautiful</p>
+                </div>
+                <div style={styles.abilityLine}>
+                  <label style={styles.scoreField}><span style={styles.lineLabel}>Piety:</span><input value={sheet.abilityDetails.Piety} onChange={updateSheetRecordField('abilityDetails', 'Piety')} style={styles.scoreInput} /></label>
+                </div>
+              </div>
+
+              <p style={styles.ruleNote}>SP - Specialization. MP - Magic Points. LP - Luck Points (d4 per level). Shirt LP - Shirt Luck Points.</p>
+
+              <div style={styles.compactStatsGrid}>
+                <label style={styles.compactLineField}><span style={styles.lineLabel}>Base class Att/Rnd:</span><input value={sheet.combatDetails['Base class Att/Rnd']} onChange={updateSheetRecordField('combatDetails', 'Base class Att/Rnd')} style={styles.lineInput} /></label>
+                <label style={styles.compactLineField}><span style={styles.lineLabel}>SP (pg. 71):</span><input value={sheet.combatDetails.SP} onChange={updateSheetRecordField('combatDetails', 'SP')} style={styles.lineInput} /></label>
+                <label style={styles.compactLineField}><span style={styles.lineLabel}>Base THACO (pg. 121):</span><input value={sheet.combatDetails['Base THACO']} onChange={updateSheetRecordField('combatDetails', 'Base THACO')} style={styles.lineInput} /></label>
+                <label style={styles.compactLineField}><span style={styles.lineLabel}>MP:</span><input value={sheet.combatDetails.MP} onChange={updateSheetRecordField('combatDetails', 'MP')} style={styles.lineInput} /></label>
+                <label style={styles.compactLineField}><span style={styles.lineLabel}>LP:</span><input value={sheet.combatDetails.LP} onChange={updateSheetRecordField('combatDetails', 'LP')} style={styles.lineInput} /></label>
+                <label style={styles.compactLineField}><span style={styles.lineLabel}>Shirt LP:</span><input value={sheet.combatDetails['Shirt LP']} onChange={updateSheetRecordField('combatDetails', 'Shirt LP')} style={styles.lineInput} /></label>
+              </div>
+
+              <div style={styles.twoColumnSections}>
+                <div style={styles.sheetSection}>
+                  <h3 style={styles.sheetSectionTitle}>Experience Points</h3>
+                  <div style={styles.miniGrid}>
+                    {['Current', 'Bonus', 'Next XP Target', 'To Reach Level'].map((field) => (
+                      <label key={field} style={styles.compactLineField}><span style={styles.lineLabel}>{field}:</span><input value={sheet.experienceDetails[field]} onChange={updateSheetRecordField('experienceDetails', field)} style={styles.lineInput} /></label>
+                    ))}
+                  </div>
+                  <p style={styles.ruleNote}>Experience Points and Hit Points begins in Chapter 3 (pg. 35).</p>
+                </div>
+                <div style={styles.sheetSection}>
+                  <h3 style={styles.sheetSectionTitle}>Hit Points</h3>
+                  <div style={styles.miniGrid}>
+                    {['Per Level', 'HP Roll', 'Adjustment', 'Total HP'].map((field) => (
+                      <label key={field} style={styles.compactLineField}><span style={styles.lineLabel}>{field}:</span><input value={sheet.hitPointDetails[field]} onChange={updateSheetRecordField('hitPointDetails', field)} readOnly={field === 'Total HP'} style={styles.lineInput} /></label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div style={styles.sheetSection}>
+                <h3 style={styles.sheetSectionTitle}>Armor Class</h3>
+                <div style={styles.compactStatsGrid}>
+                  {[
+                    ['Base', 'Base'],
+                    ['Armor Type (pg 92)', 'Armor Type'],
+                    ['Helm', 'Helm'],
+                    ['Shield', 'Shield'],
+                    ['Magical', 'Magical'],
+                    ['Real', 'Real'],
+                  ].map(([label, field]) => (
+                    <label key={field} style={styles.compactLineField}>
+                      <span style={styles.lineLabel}>{label}:</span>
+                      {field === 'Armor Type' ? (
+                        <select value={sheet.armorDetails[field]} onChange={updateSheetRecordField('armorDetails', field)} style={styles.lineInput}>
+                          <option value="">{armorTypeOptions.length ? 'Select armor' : 'No armor'}</option>
+                          {armorTypeOptions.map((option) => (
+                            <option key={option} value={option}>{option}</option>
+                          ))}
+                        </select>
+                      ) : field === 'Helm' ? (
+                        <select value={sheet.armorDetails[field]} onChange={updateSheetRecordField('armorDetails', field)} style={styles.lineInput}>
+                          <option value="">{helmOptions.length ? 'Select helm' : 'No helm'}</option>
+                          {helmOptions.map((option) => (
+                            <option key={option} value={option}>{option}</option>
+                          ))}
+                        </select>
+                      ) : field === 'Shield' ? (
+                        <select value={sheet.armorDetails[field]} onChange={updateSheetRecordField('armorDetails', field)} style={styles.lineInput}>
+                          <option value="">{shieldOptions.length ? 'Select shield' : 'No shield'}</option>
+                          {shieldOptions.map((option) => (
+                            <option key={option} value={option}>{option}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input value={sheet.armorDetails[field]} onChange={updateSheetRecordField('armorDetails', field)} readOnly={field === 'Real'} style={styles.lineInput} />
+                      )}
+                    </label>
+                  ))}
+                </div>
+                <p style={styles.ruleNote}>AC Base 10 - Def Adj. Real AC = Base - Type, Helm, Shield, and Magical.</p>
+              </div>
+
+              <div style={styles.sheetSection}>
+                <div style={styles.weaponHeader}>
+                  <h3 style={styles.sheetSectionTitle}>Weapons</h3>
+                  <button type="button" onClick={addWeaponLine} style={styles.smallActionButton}>Add weapon</button>
+                </div>
+                <div style={styles.weaponTable}>
+                  <div style={{ ...styles.weaponTableGroupHead, gridColumn: '1 / span 1' }}>Weapon</div>
+                  <div style={{ ...styles.weaponTableGroupHead, gridColumn: '2 / span 1' }}>WAC</div>
+                  <div style={{ ...styles.weaponTableGroupHead, ...styles.thacoGroupHead, gridColumn: '3 / span 4' }}>THAC0</div>
+                  <div style={{ ...styles.weaponTableGroupHead, ...styles.speedGroupHead, gridColumn: '7 / span 4' }}>Speed Factor</div>
+                  <div style={{ ...styles.weaponTableGroupHead, ...styles.damageGroupHead, gridColumn: '11 / span 6' }}>Damage</div>
+                  {['Name', 'WAC', 'W', 'SB', 'SP', 'R', 'W', 'RA', 'WB', 'R', 'S-M', 'L', 'W', 'SB', 'SP', 'R'].map((head) => (
+                    <div key={head} style={styles.weaponTableHead}>{head}</div>
+                  ))}
+                  {sheet.weaponRows.map((row, rowIndex) => WEAPON_FIELDS.map((field) => (
+                    <input key={`${row.id}-${field}`} value={row[field]} onChange={updateWeaponRow(rowIndex, field)} style={styles.tableInput} />
+                  )))}
+                </div>
+                <p style={styles.ruleNote}>Specialization: +1 to Hit, +2 to Damage. Double Specialization: +3 to Hit, +3 to Damage.</p>
+                <p style={styles.ruleNote}>WAC is Real Speed Factor for parry rolls. THAC0 R = Base THAC0 - (W + SB + SP). Speed Factor R = W - (RA + WB). Damage R = W + SB + SP.</p>
+              </div>
+
+              <div style={styles.sheetSection}>
+                <h3 style={styles.sheetSectionTitle}>THAC0 Chart</h3>
+                <div style={styles.thacoChart}>
+                  <div style={styles.weaponTableHead}>Weapon</div>
+                  {THACO_ARMOR_CLASSES.map((armorClass) => <div key={armorClass} style={styles.weaponTableHead}>{armorClass}</div>)}
+                  {sheet.weaponRows.map((row, rowIndex) => (
+                    <React.Fragment key={`${row.id}-chart`}>
+                      <div style={styles.thacoWeaponName}>{row.weapon || `Weapon ${rowIndex + 1}`}</div>
+                      {THACO_ARMOR_CLASSES.map((armorClass) => (
+                        <div key={`${row.id}-${armorClass}`} style={styles.thacoCell}>{getThacoTarget(row.thacoReal, armorClass)}</div>
+                      ))}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {activePage === 'Page 3' && (
+            <>
+              <div style={styles.sheetSection}>
+                <div style={styles.weaponHeader}>
+                  <h3 style={styles.sheetSectionTitle}>Weapon Proficiencies <span style={styles.subtleTitle}>#Slot numbers Pg. 71</span></h3>
+                  <button type="button" onClick={addWeaponProficiencyLine} style={styles.smallActionButton}>Add line</button>
+                </div>
+                <div style={styles.proficiencyTable}>
+                  <div style={styles.weaponTableHead}>Weapon/Group</div><div style={styles.weaponTableHead}>Slots</div>
+                  {sheet.weaponProficiencies.map((row, rowIndex) => (
+                    <React.Fragment key={row.id}>
+                      <input value={row.name} onChange={updateProficiencyRow('weaponProficiencies', rowIndex, 'name')} style={styles.tableInput} />
+                      <input value={row.slots} onChange={updateProficiencyRow('weaponProficiencies', rowIndex, 'slots')} style={styles.tableInput} />
+                    </React.Fragment>
+                  ))}
+                </div>
+                <div style={styles.proficiencySlotRow}>
+                  <label style={styles.slotNumberField}>
+                    <span style={styles.lineLabel}>Initial Proficiency Slots:</span>
+                    <input value={sheet.proficiencyDetails['Weapon Initial Slots']} onChange={updateSheetRecordField('proficiencyDetails', 'Weapon Initial Slots')} style={styles.slotNumberInput} />
+                  </label>
+                  <label style={styles.slotNumberField}>
+                    <span style={styles.lineLabel}>One additional every:</span>
+                    <input value={sheet.proficiencyDetails['Weapon Additional Every']} onChange={updateSheetRecordField('proficiencyDetails', 'Weapon Additional Every')} style={styles.slotNumberInput} />
+                  </label>
+                  <span style={styles.lineLabel}>levels</span>
+                </div>
+              </div>
+
+              <div style={styles.twoColumnSections}>
+                <div style={styles.sheetSection}>
+                  <h3 style={styles.sheetSectionTitle}>Non-Weapon Proficiencies <span style={styles.subtleTitle}>#Roll Secondary Skill Pg. 75</span></h3>
+                  <label style={styles.compactLineField}>
+                    <span style={styles.lineLabel}>Secondary Skill:</span>
+                    <input value={sheet.proficiencyDetails['Secondary Skill']} onChange={updateSheetRecordField('proficiencyDetails', 'Secondary Skill')} style={styles.lineInput} />
+                  </label>
+                  <div style={styles.nonWeaponScroll}>
+                    <div style={styles.nonWeaponTable}>
+                      {['Proficiency', 'Slots', 'Attribute', 'Mod'].map((head) => <div key={head} style={styles.weaponTableHead}>{head}</div>)}
+                      {sheet.nonWeaponProficiencies.map((row, rowIndex) => (
+                        <React.Fragment key={row.id}>
+                          <input value={row.name} onChange={updateProficiencyRow('nonWeaponProficiencies', rowIndex, 'name')} style={styles.tableInput} />
+                          <input value={row.slots} onChange={updateProficiencyRow('nonWeaponProficiencies', rowIndex, 'slots')} style={styles.tableInput} />
+                          <input value={row.attribute} onChange={updateProficiencyRow('nonWeaponProficiencies', rowIndex, 'attribute')} style={styles.tableInput} />
+                          <input value={row.attributeMod} onChange={updateProficiencyRow('nonWeaponProficiencies', rowIndex, 'attributeMod')} style={styles.tableInput} />
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+                  <button type="button" onClick={addNonWeaponProficiencyLine} style={styles.smallActionButton}>Add proficiency</button>
+                  <div style={styles.proficiencySlotRow}>
+                    <label style={styles.slotNumberField}>
+                      <span style={styles.lineLabel}>Initial Proficiency Slots:</span>
+                      <input value={sheet.proficiencyDetails['Non-Weapon Initial Slots']} onChange={updateSheetRecordField('proficiencyDetails', 'Non-Weapon Initial Slots')} style={styles.slotNumberInput} />
+                    </label>
+                    <label style={styles.slotNumberField}>
+                      <span style={styles.lineLabel}>One additional every:</span>
+                      <input value={sheet.proficiencyDetails['Non-Weapon Additional Every']} onChange={updateSheetRecordField('proficiencyDetails', 'Non-Weapon Additional Every')} style={styles.slotNumberInput} />
+                    </label>
+                    <span style={styles.lineLabel}>levels</span>
+                  </div>
+                </div>
+
+                <div style={styles.sheetSection}>
+                  <h3 style={styles.sheetSectionTitle}>Tracking Modifiers <span style={styles.subtleTitle}>(Wisdom) Pg. 86</span></h3>
+                  <label style={styles.compactLineField}>
+                    <span style={styles.lineLabel}>Tracking Wisdom:</span>
+                    <input value={sheet.proficiencyDetails['Tracking Wisdom']} onChange={updateSheetRecordField('proficiencyDetails', 'Tracking Wisdom')} style={styles.lineInput} />
+                  </label>
+                  <div style={styles.trackingGrid}>
+                    {TRACKING_MODIFIER_LABELS.map((modifier) => (
+                      <React.Fragment key={modifier}>
+                        <span style={styles.trackingLabel}>{modifier}</span>
+                        <input value={sheet.trackingModifiers[modifier]} onChange={updateSheetRecordField('trackingModifiers', modifier)} style={styles.centeredTableInput} />
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div style={styles.twoColumnSections}>
+                <div style={styles.sheetSection}>
+                  <h3 style={styles.sheetSectionTitle}>Turning Undead <span style={styles.subtleTitle}>Pg. 137</span></h3>
+                  <div style={styles.turningGrid}>
+                    {TURNING_UNDEAD_LABELS.map(([key, label]) => (
+                      <label key={key} style={styles.turningCell}>
+                        <span style={styles.turningLabel}>{label}</span>
+                        <input value={sheet.turningUndead[key]} onChange={updateSheetRecordField('turningUndead', key)} style={styles.turningInput} />
+                      </label>
+                    ))}
+                  </div>
+                  <p style={styles.ruleNote}>T = turn. D = destroy. D* = destroy plus an additional 2d4 creatures of this type. Paladins turn as priests two levels lower.</p>
+                </div>
+
+                <div style={styles.sheetSection}>
+                  <h3 style={styles.sheetSectionTitle}>Thieving Skill Points</h3>
+                  <label style={styles.compactLineField}>
+                    <span style={styles.lineLabel}>Points to Spend:</span>
+                    <input value={sheet.proficiencyDetails['Thieving Skill Points']} readOnly style={styles.lineInput} />
+                  </label>
+                  <div style={styles.descriptionBlock}>
+                    {THIEVING_DESCRIPTIONS.map((description) => (
+                      <p key={description} style={styles.ruleNote}>{description}</p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div style={styles.sheetSection}>
+                <h3 style={styles.sheetSectionTitle}>Thieving Skills <span style={styles.subtleTitle}>Pg. 54</span></h3>
+                <div style={styles.thievingTable}>
+                  {THIEVING_SKILL_COLUMNS.map(([, label]) => <div key={label} style={styles.weaponTableHead}>{label}</div>)}
+                  {sheet.thievingSkills.map((row, rowIndex) => (
+                    <React.Fragment key={row.id}>
+                      {THIEVING_SKILL_COLUMNS.map(([field]) => (
+                        <input
+                          key={`${row.id}-${field}`}
+                          value={row[field]}
+                          onChange={updateThievingSkillRow(rowIndex, field)}
+                          readOnly={field === 'dex' || field === 'realPercent'}
+                          style={field === 'skill' ? styles.tableInput : styles.centeredTableInput}
+                        />
+                      ))}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {activePage === 'Page 4' && (
+            <>
+              <div style={styles.sheetSection}>
+                <h3 style={styles.sheetSectionTitle}>Saving Throws</h3>
+                <div style={styles.savingThrowTable}>
+                  {['Saving Throw', 'Base', 'Real', 'D4', '1', '2', '3', '4'].map((head) => <div key={head} style={styles.weaponTableHead}>{head}</div>)}
+                  {sheet.savingThrowRows.map((row, rowIndex) => (
+                    <React.Fragment key={row.id}>
+                      <input value={row.name} onChange={updateSavingThrowRow(rowIndex, 'name')} style={styles.tableInput} />
+                      <input value={row.base} onChange={updateSavingThrowRow(rowIndex, 'base')} style={styles.centeredTableInput} />
+                      <input value={row.real} onChange={updateSavingThrowRow(rowIndex, 'real')} style={styles.centeredTableInput} />
+                      <input value={row.d4} onChange={updateSavingThrowRow(rowIndex, 'd4')} style={styles.centeredTableInput} />
+                      {SAVING_THROW_CHECK_FIELDS.map((field) => (
+                        <label key={`${row.id}-${field}`} style={styles.checkboxCell}>
+                          <input checked={Boolean(row[field])} onChange={updateSavingThrowRow(rowIndex, field)} style={styles.checkboxInput} type="checkbox" />
+                        </label>
+                      ))}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+              <div style={styles.twoColumnSections}>
+                <div style={styles.sheetSection}>
+                  <h3 style={styles.sheetSectionTitle}>Saving Throw Reductions</h3>
+                  <textarea readOnly value={getSavingThrowReductionSummary(sheet)} style={{ ...styles.sheetTextarea, minHeight: 110 }} />
+                </div>
+                <div style={styles.sheetSection}>
+                  <h3 style={styles.sheetSectionTitle}>Immunities</h3>
+                  <textarea value={sheet.savingThrowDetails.Immunities} onChange={updateSheetRecordField('savingThrowDetails', 'Immunities')} style={{ ...styles.sheetTextarea, minHeight: 110 }} />
+                </div>
+              </div>
+              <div style={styles.sheetSection}>
+                <h3 style={styles.sheetSectionTitle}>Ability Bonuses and Race Notes</h3>
+                <div style={styles.savingRulesGrid}>
+                  {SAVING_THROW_RULES.map((rule) => (
+                    <p key={rule} style={styles.ruleNote}>{rule}</p>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {activePage === 'Page 5' && (
+            <>
+              <div style={styles.sheetSection}>
+                <h3 style={styles.sheetSectionTitle}>Coins, Gems, and Misc</h3>
+                <div style={styles.compactStatsGrid}>
+                  {[...COIN_FIELDS, 'Gems', 'Misc'].map((field) => (
+                    <label key={field} style={styles.compactLineField}><span style={styles.lineLabel}>{field}:</span><input value={sheet.equipmentDetails[field]} onChange={updateSheetRecordField('equipmentDetails', field)} style={styles.lineInput} /></label>
+                  ))}
+                </div>
+                <p style={styles.ruleNote}>Starting Equipment - Cost 19 GP of starting coins.</p>
+              </div>
+              <div style={styles.sheetSection}>
+                <div style={styles.weaponHeader}>
+                  <h3 style={styles.sheetSectionTitle}>Starting Equipment</h3>
+                  <button type="button" onClick={() => setIsEquipmentModalOpen(true)} style={styles.smallActionButton}>
+                    Equipment List
+                  </button>
+                </div>
+                <div style={styles.equipmentList}>
+                  {STARTING_EQUIPMENT.map((item, index) => (
+                    <input
+                      key={item}
+                      value={sheet.equipmentDetails[`Starting Equipment ${index + 1}`]}
+                      onChange={updateSheetRecordField('equipmentDetails', `Starting Equipment ${index + 1}`)}
+                      style={styles.equipmentItemInput}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div style={styles.sheetSection}>
+                <div style={styles.weaponHeader}>
+                  <h3 style={styles.sheetSectionTitle}>Other Equipment</h3>
+                  <button type="button" onClick={() => addEquipmentBucketLine('Other')} style={styles.smallActionButton}>Add item</button>
+                </div>
+                <div style={styles.equipmentList}>
+                  {getEquipmentBucketLines('Other').map((item, index) => (
+                    <input
+                      key={`other-equipment-${index}`}
+                      value={item}
+                      onChange={updateEquipmentBucketLine('Other', index)}
+                      style={styles.equipmentItemInput}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div style={styles.threeColumnSections}>
+                {['Armor', 'Weapons', 'Magical'].map((field) => (
+                  <div key={field} style={styles.sheetSection}>
+                    <div style={styles.weaponHeader}>
+                      <h3 style={styles.sheetSectionTitle}>{field === 'Magical' ? 'Magical Items' : field}</h3>
+                      <button type="button" onClick={() => addEquipmentBucketLine(field)} style={styles.smallActionButton}>Add item</button>
+                    </div>
+                    <div style={styles.equipmentList}>
+                      {getEquipmentBucketLines(field).map((item, index) => (
+                        <input
+                          key={`${field}-equipment-${index}`}
+                          value={item}
+                          onChange={updateEquipmentBucketLine(field, index)}
+                          style={styles.equipmentItemInput}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {activePage === 'Page 6' && (
+            <div style={styles.page6Layout}>
+              <div style={styles.sheetSection}>
+                <div style={styles.weaponHeader}>
+                  <h3 style={styles.sheetSectionTitle}>XP</h3>
+                  <button type="button" onClick={addXPAwardLine} style={styles.smallActionButton}>Add XP row</button>
+                </div>
+                <div style={styles.xpAwardSummary}>
+                  <span>Total XP Added</span>
+                  <strong>{formatExperience(xpAwardTotal)}</strong>
+                </div>
+                {hasLeveledUp && <div style={styles.levelUpNotice}>Player leveled up. Current XP meets or exceeds the next XP target.</div>}
+                <div style={styles.xpAwardTable}>
+                  {Array.from({ length: XP_COLUMN_COUNT }, (_, index) => <div key={`xp-head-${index}`} style={styles.weaponTableHead}>XP</div>)}
+                  {sheet.xpAwardRows.map((row, rowIndex) => (
+                    <input key={row.id} value={row.xp} onChange={updateXPAwardRow(rowIndex)} style={styles.centeredTableInput} />
+                  ))}
+                </div>
+              </div>
+              <div style={{ ...styles.sheetSection, ...styles.page6Notes }}>
+                <h3 style={styles.sheetSectionTitle}>Valuables / Notes</h3>
+                <textarea value={sheet.xpValuablesNotes} onChange={(event) => setSheet((currentSheet) => ({ ...currentSheet, xpValuablesNotes: event.target.value }))} style={{ ...styles.sheetTextarea, ...styles.page6Textarea }} />
+              </div>
+            </div>
+          )}
+        </section>
+
+        <EquipmentListModal
+          isOpen={isEquipmentModalOpen}
+          onClose={() => setIsEquipmentModalOpen(false)}
+          onEquipLine={handleEquipLine}
+          actionLabel="Get"
+        />
+      </main>
+    </ImageBackgroundWrapper>
+  );
+}
+
+const styles: Record<string, React.CSSProperties> = {
+  page: {
+    color: '#f8fafc',
+    margin: '0 auto',
+    maxWidth: 1180,
+    padding: '16px 16px 56px',
+  },
+  header: {
+    alignItems: 'flex-start',
+    display: 'flex',
+    gap: 16,
+    justifyContent: 'space-between',
+    margin: '18px 0',
+  },
+  headerActions: {
+    alignItems: 'center',
+    display: 'flex',
+    gap: 10,
+  },
+  eyebrow: {
+    color: '#d4af37',
+    fontSize: 14,
+    fontWeight: 800,
+    margin: '0 0 8px',
+  },
+  title: {
+    fontSize: 38,
+    margin: 0,
+  },
+  headerRow: {
+    alignItems: 'flex-start',
+    display: 'flex',
+    gap: 16,
+    justifyContent: 'space-between',
+    marginBottom: 26,
+    paddingTop: 10,
+  },
+  backButton: {
+    background: 'transparent',
+    border: 0,
+    color: '#a9fff7',
+    cursor: 'pointer',
+    fontWeight: 800,
+    marginTop: 10,
+    minHeight: 32,
+    padding: '0 2px',
+    textDecoration: 'underline',
+    textUnderlineOffset: 4,
+  },
+  savedPill: {
+    border: '1px solid rgba(74,222,128,0.42)',
+    borderRadius: 999,
+    color: '#bbf7d0',
+    fontWeight: 800,
+    padding: '7px 10px',
+  },
+  resetButton: {
+    background: 'rgba(127,29,29,0.38)',
+    border: '1px solid rgba(248,113,113,0.45)',
+    borderRadius: 6,
+    color: '#fecaca',
+    cursor: 'pointer',
+    fontWeight: 800,
+    minHeight: 38,
+    padding: '0 12px',
+  },
+  sheet: {
+    background: [
+      'radial-gradient(circle at 15% 8%, rgba(255,255,255,0.52), transparent 28%)',
+      'radial-gradient(circle at 88% 12%, rgba(108,69,33,0.16), transparent 34%)',
+      'radial-gradient(circle at 18% 88%, rgba(119,75,31,0.14), transparent 32%)',
+      'linear-gradient(135deg, #ead4a6 0%, #f6e8c8 42%, #dfc18a 100%)',
+    ].join(', '),
+    border: '1px solid rgba(91,58,28,0.48)',
+    borderRadius: 8,
+    boxShadow: '0 18px 48px rgba(0,0,0,0.34), inset 0 0 34px rgba(94,58,22,0.16)',
+    color: '#24180f',
+    display: 'grid',
+    fontFamily: '"Palatino Linotype", "Book Antiqua", Georgia, serif',
+    gap: 18,
+    padding: 24,
+  },
+  sheetHeader: {
+    alignItems: 'center',
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 12,
+    justifyContent: 'space-between',
+  },
+  sheetTitle: {
+    color: '#3a2413',
+    fontSize: 20,
+    fontWeight: 900,
+    margin: 0,
+  },
+  sheetTabs: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  sheetTab: {
+    background: 'rgba(236,211,159,0.78)',
+    border: '1px solid rgba(91,58,28,0.42)',
+    borderRadius: 4,
+    color: '#3a2413',
+    cursor: 'pointer',
+    fontWeight: 800,
+    minHeight: 32,
+    padding: '0 10px',
+  },
+  sheetTabActive: {
+    background: '#523315',
+    color: '#fff3d2',
+  },
+  lineGrid: {
+    display: 'grid',
+    gap: '14px 16px',
+    gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+  },
+  lineField: {
+    display: 'grid',
+    gap: 4,
+    gridColumn: 'span 2',
+  },
+  shortLineField: {
+    display: 'grid',
+    gap: 4,
+    gridColumn: 'span 1',
+  },
+  detailRow: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '12px 14px',
+  },
+  compactLineField: {
+    alignItems: 'end',
+    display: 'grid',
+    flex: '1 1 92px',
+    gap: 4,
+    minWidth: 0,
+  },
+  tinyLineField: {
+    alignItems: 'end',
+    display: 'grid',
+    flex: '0 1 58px',
+    gap: 4,
+    minWidth: 52,
+  },
+  smallLineField: {
+    alignItems: 'end',
+    display: 'grid',
+    flex: '0 1 78px',
+    gap: 4,
+    minWidth: 68,
+  },
+  mediumLineField: {
+    alignItems: 'end',
+    display: 'grid',
+    flex: '0 1 94px',
+    gap: 4,
+    minWidth: 78,
+  },
+  socialClassField: {
+    alignItems: 'end',
+    display: 'grid',
+    flex: '1 1 164px',
+    gap: 4,
+    minWidth: 0,
+  },
+  lineLabel: {
+    color: '#4b2e16',
+    fontSize: 13,
+    fontWeight: 800,
+  },
+  lineInput: {
+    background: 'rgba(255,248,221,0.22)',
+    border: 0,
+    borderBottom: '1px solid rgba(62,37,17,0.66)',
+    boxSizing: 'border-box',
+    color: '#24180f',
+    fontFamily: '"Palatino Linotype", "Book Antiqua", Georgia, serif',
+    fontSize: 16,
+    minHeight: 34,
+    minWidth: 0,
+    outline: 'none',
+    padding: '4px 5px',
+    width: '100%',
+  },
+  textBlock: {
+    display: 'grid',
+    gap: 8,
+  },
+  sheetTextarea: {
+    background: 'rgba(255,248,221,0.28)',
+    border: '1px solid rgba(91,58,28,0.3)',
+    borderRadius: 6,
+    color: '#24180f',
+    fontFamily: '"Palatino Linotype", "Book Antiqua", Georgia, serif',
+    fontSize: 16,
+    lineHeight: '30px',
+    minHeight: 64,
+    outline: 'none',
+    padding: '6px 8px',
+    resize: 'vertical',
+  },
+  sheetSection: {
+    border: '1px solid rgba(91,58,28,0.28)',
+    borderRadius: 6,
+    display: 'grid',
+    gap: 12,
+    padding: 12,
+  },
+  sheetSectionTitle: {
+    color: '#3a2413',
+    fontSize: 16,
+    fontWeight: 900,
+    margin: 0,
+  },
+  subtleTitle: {
+    color: '#6b4f35',
+    fontSize: 12,
+    fontWeight: 800,
+  },
+  abilityLine: {
+    alignItems: 'end',
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '12px 14px',
+  },
+  scoreField: {
+    display: 'grid',
+    flex: '0 1 112px',
+    gap: 4,
+    minWidth: 96,
+  },
+  scoreInput: {
+    background: 'rgba(255,248,221,0.34)',
+    border: '1px solid rgba(82,51,21,0.28)',
+    borderBottom: '2px solid rgba(62,37,17,0.78)',
+    borderRadius: 4,
+    color: '#24180f',
+    fontFamily: '"Palatino Linotype", "Book Antiqua", Georgia, serif',
+    fontSize: 20,
+    fontWeight: 900,
+    minHeight: 38,
+    outline: 'none',
+    padding: '3px 6px',
+    textAlign: 'center',
+    width: '100%',
+  },
+  modifierField: {
+    alignItems: 'end',
+    display: 'grid',
+    flex: '1 1 82px',
+    gap: 4,
+    minWidth: 68,
+  },
+  longModifierField: {
+    alignItems: 'end',
+    display: 'grid',
+    flex: '1 1 170px',
+    gap: 4,
+    minWidth: 130,
+  },
+  comelinessLine: {
+    alignItems: 'end',
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '12px 14px',
+  },
+  inlineNote: {
+    color: '#5b4026',
+    flex: '2 1 380px',
+    fontSize: 13,
+    fontWeight: 800,
+    lineHeight: 1.4,
+    margin: 0,
+  },
+  ruleNote: {
+    color: '#5b4026',
+    fontSize: 13,
+    fontWeight: 800,
+    lineHeight: 1.45,
+    margin: 0,
+  },
+  descriptionBlock: {
+    display: 'grid',
+    gap: 6,
+  },
+  compactStatsGrid: {
+    display: 'grid',
+    gap: '12px 14px',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+  },
+  miniGrid: {
+    display: 'grid',
+    gap: '12px 14px',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))',
+  },
+  twoColumnSections: {
+    display: 'grid',
+    gap: 14,
+    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+  },
+  threeColumnSections: {
+    display: 'grid',
+    gap: 14,
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+  },
+  weaponHeader: {
+    alignItems: 'center',
+    display: 'flex',
+    gap: 12,
+    justifyContent: 'space-between',
+  },
+  smallActionButton: {
+    background: '#523315',
+    border: '1px solid rgba(91,58,28,0.42)',
+    borderRadius: 4,
+    color: '#fff3d2',
+    cursor: 'pointer',
+    fontWeight: 800,
+    minHeight: 32,
+    padding: '0 10px',
+  },
+  weaponTable: {
+    display: 'grid',
+    gap: 1,
+    gridTemplateColumns: 'minmax(130px, 1.5fr) minmax(54px, 0.7fr) repeat(4, minmax(54px, 0.8fr)) repeat(4, minmax(54px, 0.8fr)) repeat(6, minmax(58px, 0.9fr))',
+    overflowX: 'auto',
+  },
+  weaponTableGroupHead: {
+    background: '#3f2814',
+    color: '#fff3d2',
+    fontSize: 13,
+    fontWeight: 900,
+    minHeight: 30,
+    padding: '7px 5px',
+    textAlign: 'center',
+  },
+  thacoGroupHead: {
+    borderLeft: '3px solid rgba(255,243,210,0.55)',
+  },
+  speedGroupHead: {
+    borderLeft: '3px solid rgba(255,243,210,0.55)',
+  },
+  damageGroupHead: {
+    borderLeft: '3px solid rgba(255,243,210,0.55)',
+  },
+  weaponTableHead: {
+    background: 'rgba(82,51,21,0.88)',
+    color: '#fff3d2',
+    fontSize: 12,
+    fontWeight: 900,
+    minHeight: 28,
+    padding: '6px 5px',
+    textAlign: 'center',
+  },
+  tableInput: {
+    background: 'rgba(255,248,221,0.3)',
+    border: '1px solid rgba(62,37,17,0.3)',
+    boxSizing: 'border-box',
+    color: '#24180f',
+    fontFamily: '"Palatino Linotype", "Book Antiqua", Georgia, serif',
+    fontSize: 14,
+    minHeight: 32,
+    minWidth: 0,
+    outline: 'none',
+    padding: '4px 5px',
+    width: '100%',
+  },
+  centeredTableInput: {
+    background: 'rgba(255,248,221,0.3)',
+    border: '1px solid rgba(62,37,17,0.3)',
+    boxSizing: 'border-box',
+    color: '#24180f',
+    fontFamily: '"Palatino Linotype", "Book Antiqua", Georgia, serif',
+    fontSize: 14,
+    minHeight: 32,
+    minWidth: 0,
+    outline: 'none',
+    padding: '4px 5px',
+    textAlign: 'center',
+    width: '100%',
+  },
+  page3Grid: {
+    display: 'grid',
+    gap: 14,
+    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+  },
+  fullWidth: {
+    gridColumn: '1 / -1',
+  },
+  proficiencyTable: {
+    display: 'grid',
+    gap: 1,
+    gridTemplateColumns: 'minmax(220px, 1fr) minmax(70px, 0.18fr)',
+  },
+  nonWeaponTable: {
+    display: 'grid',
+    gap: 1,
+    gridTemplateColumns: 'minmax(170px, 1fr) minmax(54px, 0.18fr) minmax(82px, 0.3fr) minmax(54px, 0.18fr)',
+  },
+  nonWeaponScroll: {
+    border: '1px solid rgba(62,37,17,0.24)',
+    borderRadius: 4,
+    maxHeight: 360,
+    overflowY: 'auto',
+    paddingRight: 3,
+  },
+  proficiencySlotRow: {
+    alignItems: 'end',
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '10px 12px',
+  },
+  slotNumberField: {
+    alignItems: 'end',
+    display: 'grid',
+    gap: 4,
+    gridTemplateColumns: 'auto 54px',
+    minWidth: 0,
+  },
+  slotNumberInput: {
+    background: 'rgba(255,248,221,0.34)',
+    border: '1px solid rgba(62,37,17,0.3)',
+    borderRadius: 4,
+    boxSizing: 'border-box',
+    color: '#24180f',
+    fontFamily: '"Palatino Linotype", "Book Antiqua", Georgia, serif',
+    fontSize: 16,
+    fontWeight: 900,
+    minHeight: 30,
+    outline: 'none',
+    padding: '3px 5px',
+    textAlign: 'center',
+    width: 54,
+  },
+  trackingGrid: {
+    display: 'grid',
+    gap: 1,
+    gridTemplateColumns: 'minmax(172px, 1fr) minmax(46px, 0.18fr)',
+  },
+  trackingLabel: {
+    alignItems: 'center',
+    background: 'rgba(255,248,221,0.24)',
+    border: '1px solid rgba(62,37,17,0.22)',
+    display: 'flex',
+    fontSize: 12,
+    fontWeight: 800,
+    minHeight: 27,
+    padding: '3px 6px',
+  },
+  turningGrid: {
+    display: 'grid',
+    gap: 1,
+    gridTemplateColumns: 'repeat(auto-fit, minmax(128px, 1fr))',
+  },
+  turningCell: {
+    alignItems: 'center',
+    background: 'rgba(255,248,221,0.24)',
+    border: '1px solid rgba(62,37,17,0.22)',
+    display: 'grid',
+    gap: 6,
+    gridTemplateColumns: 'minmax(68px, 1fr) minmax(42px, 0.5fr)',
+    minHeight: 36,
+    padding: '4px 6px',
+  },
+  turningLabel: {
+    color: '#4b2e16',
+    fontSize: 12,
+    fontWeight: 900,
+    lineHeight: 1.1,
+  },
+  turningInput: {
+    background: 'rgba(255,248,221,0.42)',
+    border: '1px solid rgba(62,37,17,0.28)',
+    borderRadius: 4,
+    boxSizing: 'border-box',
+    color: '#24180f',
+    fontFamily: '"Palatino Linotype", "Book Antiqua", Georgia, serif',
+    fontSize: 14,
+    fontWeight: 900,
+    minHeight: 28,
+    minWidth: 0,
+    outline: 'none',
+    padding: '3px 5px',
+    textAlign: 'center',
+    width: '100%',
+  },
+  thievingTable: {
+    display: 'grid',
+    gap: 1,
+    gridTemplateColumns: 'minmax(132px, 1.3fr) repeat(10, minmax(58px, 0.7fr))',
+    overflowX: 'auto',
+  },
+  savingThrowTable: {
+    display: 'grid',
+    gap: 1,
+    gridTemplateColumns: 'minmax(180px, 1fr) minmax(54px, 0.2fr) minmax(92px, 0.38fr) minmax(48px, 0.16fr) repeat(4, minmax(34px, 0.12fr))',
+  },
+  savingRulesGrid: {
+    columnGap: 18,
+    columns: '2 260px',
+  },
+  checkboxCell: {
+    alignItems: 'center',
+    background: 'rgba(255,248,221,0.3)',
+    border: '1px solid rgba(62,37,17,0.3)',
+    display: 'flex',
+    justifyContent: 'center',
+    minHeight: 38,
+  },
+  checkboxInput: {
+    accentColor: '#523315',
+    height: 16,
+    width: 16,
+  },
+  equipmentList: {
+    columnGap: 18,
+    columns: '3 220px',
+  },
+  equipmentItemInput: {
+    background: 'rgba(255,248,221,0.24)',
+    border: 0,
+    borderBottom: '1px solid rgba(62,37,17,0.34)',
+    color: '#24180f',
+    display: 'block',
+    fontFamily: '"Palatino Linotype", "Book Antiqua", Georgia, serif',
+    fontSize: 14,
+    fontWeight: 800,
+    marginBottom: 7,
+    minHeight: 28,
+    outline: 'none',
+    padding: '3px 5px',
+    width: '100%',
+  },
+  otherEquipmentInput: {
+    background: 'rgba(255,248,221,0.24)',
+    border: 0,
+    borderBottom: '1px solid rgba(62,37,17,0.34)',
+    boxSizing: 'border-box',
+    color: '#24180f',
+    display: 'block',
+    fontFamily: '"Palatino Linotype", "Book Antiqua", Georgia, serif',
+    fontSize: 14,
+    fontWeight: 800,
+    lineHeight: 1.35,
+    minHeight: 190,
+    outline: 'none',
+    padding: '6px 5px',
+    resize: 'vertical',
+    width: '100%',
+  },
+  xpAwardSummary: {
+    alignItems: 'center',
+    background: 'rgba(82,51,21,0.12)',
+    border: '1px solid rgba(62,37,17,0.24)',
+    borderRadius: 4,
+    display: 'flex',
+    flexWrap: 'wrap',
+    fontSize: 15,
+    fontWeight: 900,
+    gap: 10,
+    justifyContent: 'space-between',
+    minHeight: 40,
+    padding: '8px 10px',
+  },
+  levelUpNotice: {
+    background: 'rgba(78, 112, 42, 0.2)',
+    border: '1px solid rgba(64, 92, 34, 0.42)',
+    borderRadius: 5,
+    color: '#2d461c',
+    fontSize: 14,
+    fontWeight: 900,
+    lineHeight: 1.35,
+    padding: '9px 10px',
+  },
+  page6Layout: {
+    alignItems: 'stretch',
+    display: 'grid',
+    gap: 14,
+    gridTemplateColumns: 'minmax(220px, 0.42fr) minmax(420px, 1.58fr)',
+  },
+  page6Notes: {
+    alignItems: 'stretch',
+    display: 'grid',
+    gridTemplateRows: 'auto 1fr',
+    minHeight: 0,
+  },
+  page6Textarea: {
+    height: '100%',
+    minHeight: 620,
+    resize: 'vertical',
+  },
+  xpAwardTable: {
+    display: 'grid',
+    gap: 1,
+    gridTemplateColumns: `repeat(${XP_COLUMN_COUNT}, minmax(56px, 1fr))`,
+  },
+  thacoChart: {
+    display: 'grid',
+    gap: 1,
+    gridTemplateColumns: 'minmax(130px, 1.4fr) repeat(21, minmax(36px, 1fr))',
+    overflowX: 'auto',
+  },
+  thacoWeaponName: {
+    background: 'rgba(255,248,221,0.38)',
+    border: '1px solid rgba(62,37,17,0.22)',
+    color: '#24180f',
+    fontSize: 13,
+    fontWeight: 900,
+    minHeight: 30,
+    padding: '6px 5px',
+  },
+  thacoCell: {
+    background: 'rgba(255,248,221,0.28)',
+    border: '1px solid rgba(62,37,17,0.2)',
+    color: '#24180f',
+    fontSize: 13,
+    fontWeight: 800,
+    minHeight: 30,
+    padding: '6px 5px',
+    textAlign: 'center',
+  },
+};

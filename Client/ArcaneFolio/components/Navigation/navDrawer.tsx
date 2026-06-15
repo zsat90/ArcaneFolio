@@ -1,205 +1,301 @@
-import React, { useState } from "react";
-import { View, StyleSheet, Text, TouchableOpacity } from "react-native";
+import React, { ChangeEvent, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { logout } from '../../utils/auth/authService';
 import {
-  createDrawerNavigator,
-  DrawerContentScrollView,
-  DrawerItem,
-  DrawerItemList,
-} from "@react-navigation/drawer";
-import CharacterSelectScreen from "../../screens/Characters/CharacterSelectScreen";
-import Header from "../Header";
-import NavBar from "./navBar";
-import Icon from "react-native-vector-icons/MaterialIcons";
-import CommunityIcon from "react-native-vector-icons/MaterialCommunityIcons";
-import TextInput from "../TextInput";
-import { handleAddMagicPoints } from "@/utils/Validation/userInputs";
-import { handleLogout } from "@/utils/Login/LoginAuth";
-import { useNavigation } from "@react-navigation/native";
-import { useAppSelector, useAppDispatch } from "@/redux/hooks";
-import { addMagicPoints, resetMagicPoints } from "@/redux/slices/characterSlice";
+  addMagicPoints,
+  damageSelectedCharacter,
+  healSelectedCharacter,
+  restSelectedCharacter,
+  useSelectedCharacter,
+} from '../../utils/character/characterState';
 
+const NavDrawer = () => {
+  const router = useRouter();
+  const selectedCharacter = useSelectedCharacter();
+  const [damageAmount, setDamageAmount] = useState('');
+  const [healAmount, setHealAmount] = useState('');
+  const [magicAmount, setMagicAmount] = useState('');
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch {
+      // Route away even if Firebase is unavailable in the current environment.
+    }
 
-const Drawer = createDrawerNavigator();
+    router.push('/login');
+  };
 
-const NavDrawer: React.FC = () => {
-  const [magicPoint, setMagicPoints] = useState(null);
-  const [name, setName] = useState({ value: "", error: "" });
-  const [token, setToken] = useState('')
-  const navigation = useNavigation()
-  const selectedCharacter = useAppSelector((state) => state.character.selectedCharacter)
-  const dispatch = useAppDispatch()
+  const handleRest = () => {
+    restSelectedCharacter();
+  };
 
+  const parseAmount = (value: string) => {
+    const parsed = Number(value.trim());
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const handleDamage = () => {
+    damageSelectedCharacter(parseAmount(damageAmount));
+    setDamageAmount('');
+  };
+
+  const handleHeal = () => {
+    healSelectedCharacter(parseAmount(healAmount));
+    setHealAmount('');
+  };
+
+  const handleAddMagic = () => {
+    addMagicPoints(parseAmount(magicAmount));
+    setMagicAmount('');
+  };
+
+  const updateDamageAmount = (event: ChangeEvent<HTMLInputElement>) => {
+    setDamageAmount(event.target.value);
+  };
+
+  const updateHealAmount = (event: ChangeEvent<HTMLInputElement>) => {
+    setHealAmount(event.target.value);
+  };
+
+  const updateMagicAmount = (event: ChangeEvent<HTMLInputElement>) => {
+    setMagicAmount(event.target.value);
+  };
 
   return (
-    <Drawer.Navigator
-      screenOptions={({ navigation }) => ({
-        header: () => <Header navigation={navigation} />,
-      })}
-      drawerContent={(props) => (
-        <DrawerContentScrollView
-          {...props}
-          contentContainerStyle={styles.drawerContent}
-        >
-          <DrawerItemList {...props} />
-          <View style={styles.labelContainer}>
-            <Text style={styles.magicPointsLabel}>Magic Points</Text>
-          </View>
-          {/* Reset Magic Points Section */}
-          <View style={styles.magicPointsContainer}>
-            {/* Add/Reset Magic Points Section */}
-            <View style={styles.campfireContainer}>
-              <TouchableOpacity
-                style={styles.campfireIcon}
-                onPress={() => {
-                  dispatch(resetMagicPoints(selectedCharacter.id))
-                }}
-              >
-                <CommunityIcon
-                  name="campfire"
-                  size={40}
-                  color="#231F20"
-                  style={styles.icon}
-                />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.addMagicPointsContainer}>
-              <TextInput
-                label="Add"
-                keyboardType="numeric"
-                value={magicPoint || ""}
-                onChangeText={(text) =>
-                  handleAddMagicPoints(text, setMagicPoints)
-                }
-                style={styles.textInput}
-                errorText={name.error}
-              />
+    <nav style={styles.nav} aria-label="Dashboard navigation">
+      <Link href="/dashboard" legacyBehavior><a style={styles.brand}>Home</a></Link>
 
-              <TouchableOpacity
-                style={styles.iconContainer}
-                onPress={() => { 
-                  dispatch(addMagicPoints({characterId: selectedCharacter.id, magicPoints: magicPoint.value}))
-                  setMagicPoints(null);
-                }}
-              >
-                <Icon
-                  name="add-box"
-                  size={50}
-                  color="#4A6FA5"
-                  style={styles.icon}
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
+      <div style={styles.links}>
+        <Link href="/dashboard/character-sheet" legacyBehavior><a style={styles.link}>Sheet</a></Link>
+        <Link href="/dashboard/spells" legacyBehavior><a style={styles.link}>Spells</a></Link>
+        <Link href="/dashboard/spellbook" legacyBehavior><a style={styles.link}>Spellbook</a></Link>
+      </div>
 
-          <View style={styles.logoutContainer}>
-            <DrawerItem
-              label="Logout"
-              icon={({ color }) => (
-                <Icon name="logout" color={color} size={24} />
-              )}
-              onPress={() => handleLogout({setToken, navigation})}
-              labelStyle={styles.logoutLabel}
-            />
-          </View>
-        </DrawerContentScrollView>
-      )}
-    >
-      <Drawer.Screen
-        name="Home"
-        component={NavBar}
-        options={{
-          drawerIcon: ({ color }) => (
-            <Icon name="home" color={color} size={24} />
-          ),
-          drawerLabelStyle: {
-            fontSize: 20,
-          },
-        }}
-      />
-      <Drawer.Screen
-        name="Characters"
-        component={CharacterSelectScreen}
-        options={{
-          drawerIcon: ({ color }) => (
-            <Icon name="person" color={color} size={24} />
-          ),
-          drawerLabelStyle: {
-            fontSize: 20,
-          },
-        }}
-      />
-    </Drawer.Navigator>
+      <div style={styles.characterTools}>
+        {selectedCharacter && (
+          <>
+            <div style={styles.resourcePanel}>
+              <div style={styles.resourceSummary}>
+                <span style={styles.resourceLabel}>HP</span>
+                <strong style={styles.resourceValue}>
+                  {selectedCharacter.hitPoints ?? 0}/{selectedCharacter.maxHitPoints ?? selectedCharacter.hitPoints ?? 0}
+                </strong>
+              </div>
+              <div style={styles.resourceActions}>
+                <input
+                  aria-label="Damage amount"
+                  inputMode="numeric"
+                  onChange={updateDamageAmount}
+                  placeholder="Dmg"
+                  style={styles.resourceInput}
+                  value={damageAmount}
+                />
+                <button type="button" onClick={handleDamage} style={styles.damageButton}>
+                  Damage
+                </button>
+                <input
+                  aria-label="Healing amount"
+                  inputMode="numeric"
+                  onChange={updateHealAmount}
+                  placeholder="Heal"
+                  style={styles.resourceInput}
+                  value={healAmount}
+                />
+                <button type="button" onClick={handleHeal} style={styles.healButton}>
+                  Heal
+                </button>
+              </div>
+            </div>
+            <div style={styles.resourcePanel}>
+              <div style={styles.resourceSummary}>
+                <span style={styles.resourceLabel}>MP</span>
+                <strong style={styles.resourceValue}>
+                  {selectedCharacter.magicPoints ?? 0}/{selectedCharacter.maxMagicPoints ?? selectedCharacter.magicPoints ?? 0}
+                </strong>
+              </div>
+              <div style={styles.resourceActions}>
+                <input
+                  aria-label="Magic point amount"
+                  inputMode="numeric"
+                  onChange={updateMagicAmount}
+                  placeholder="MP"
+                  style={styles.resourceInput}
+                  value={magicAmount}
+                />
+                <button type="button" onClick={handleAddMagic} style={styles.magicButton}>
+                  Add MP
+                </button>
+              </div>
+            </div>
+            <button type="button" onClick={handleRest} style={styles.restButton}>
+              Rest
+            </button>
+          </>
+        )}
+
+        <button type="button" onClick={handleLogout} style={styles.logout}>
+          Logout
+        </button>
+      </div>
+    </nav>
   );
 };
 
-const styles = StyleSheet.create({
-  drawerContent: {
-    flex: 1,
+const styles: Record<string, React.CSSProperties> = {
+  nav: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 14,
+    border: '1px solid rgba(255,255,255,0.12)',
+    borderRadius: 8,
+    background: 'rgba(15,23,42,0.9)',
+    boxShadow: '0 14px 36px rgba(0,0,0,0.22)',
+    padding: '12px 14px',
+    flexWrap: 'wrap',
   },
-
-  logoutContainer: {
-    borderTopWidth: 1,
-    borderTopColor: "#ccc",
-    flexGrow: 1,
-    paddingBottom: 20,
-    justifyContent: "flex-end",
+  brand: {
+    color: '#f8fafc',
+    fontWeight: 800,
+    textDecoration: 'none',
+    letterSpacing: 0,
   },
-  logoutLabel: {
-    fontSize: 20,
+  links: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
   },
-
-  labelContainer: {
-    marginTop: 40,
-    paddingHorizontal: 10,
-    marginBottom: 10,
+  link: {
+    color: '#a9fff7',
+    textDecoration: 'none',
+    fontWeight: 700,
+    padding: '8px 10px',
+    borderRadius: 6,
+    background: 'rgba(255,255,255,0.05)',
   },
-
-  magicPointsLabel: {
+  logout: {
+    border: '1px solid rgba(248,113,113,0.45)',
+    borderRadius: 6,
+    background: 'rgba(127,29,29,0.38)',
+    color: '#fecaca',
+    cursor: 'pointer',
+    fontWeight: 800,
+    minHeight: 38,
+    padding: '0 12px',
+  },
+  characterTools: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  resourcePanel: {
+    alignItems: 'center',
+    background: 'rgba(2,6,23,0.32)',
+    border: '1px solid rgba(255,255,255,0.12)',
+    borderRadius: 8,
+    display: 'flex',
+    gap: 8,
+    minHeight: 42,
+    padding: '6px 8px',
+  },
+  resourceSummary: {
+    alignItems: 'baseline',
+    border: '1px solid rgba(212,175,55,0.35)',
+    borderRadius: 6,
+    display: 'flex',
+    gap: 6,
+    minHeight: 30,
+    padding: '4px 8px',
+    whiteSpace: 'nowrap',
+  },
+  resourceLabel: {
+    color: '#fde68a',
     fontSize: 12,
-    fontWeight: "bold",
-    marginBottom: 10,
-    color: "#231F20",
+    fontWeight: 800,
+    letterSpacing: 0,
   },
-
-  magicPointsContainer: {
-    marginBottom: 40,
-    width: "100%",
-    flexDirection: "row",
-    justifyContent: 'flex-start'
-  },
-
-  campfireContainer: {
-    alignItems: "center",
-    marginRight: 10,
-  },
-
-  campfireIcon: {
-    marginTop: 5,
-    marginLeft: 20
-  },
-
-  addMagicPointsContainer: {
-    flexDirection: "row",
-    width: "25%",
-    marginLeft: 70
-  },
-
-  textInput: {
-    height: 40,
+  resourceValue: {
+    color: '#f8fafc',
     fontSize: 15,
+    fontWeight: 900,
   },
-
-  iconContainer: {
-    justifyContent: "flex-end",
-    alignItems: "center",
+  resourceActions: {
+    alignItems: 'center',
+    display: 'flex',
+    gap: 4,
   },
-
-  icon: {
-    marginTop: 5,
-    marginRight: 15,
+  resourceInput: {
+    border: '1px solid rgba(255,255,255,0.18)',
+    borderRadius: 6,
+    background: 'rgba(2,6,23,0.54)',
+    color: '#f8fafc',
+    minHeight: 30,
+    padding: '0 8px',
+    width: 54,
   },
-
-});
+  damageButton: {
+    border: '1px solid rgba(248,113,113,0.45)',
+    borderRadius: 6,
+    background: 'rgba(127,29,29,0.32)',
+    color: '#fecaca',
+    cursor: 'pointer',
+    fontWeight: 800,
+    minHeight: 30,
+    padding: '0 8px',
+  },
+  healButton: {
+    border: '1px solid rgba(74,222,128,0.42)',
+    borderRadius: 6,
+    background: 'rgba(20,83,45,0.3)',
+    color: '#bbf7d0',
+    cursor: 'pointer',
+    fontWeight: 800,
+    minHeight: 30,
+    padding: '0 8px',
+  },
+  magicButton: {
+    border: '1px solid rgba(169,255,247,0.35)',
+    borderRadius: 6,
+    background: 'rgba(8,47,73,0.46)',
+    color: '#a9fff7',
+    cursor: 'pointer',
+    fontWeight: 800,
+    minHeight: 30,
+    padding: '0 8px',
+  },
+  restButton: {
+    border: '1px solid rgba(74,222,128,0.42)',
+    borderRadius: 6,
+    background: 'rgba(20,83,45,0.38)',
+    color: '#bbf7d0',
+    cursor: 'pointer',
+    fontWeight: 800,
+    minHeight: 38,
+    padding: '0 12px',
+  },
+  addButton: {
+    border: '1px solid rgba(169,255,247,0.35)',
+    borderRadius: 6,
+    background: 'rgba(8,47,73,0.46)',
+    color: '#a9fff7',
+    cursor: 'pointer',
+    fontWeight: 800,
+    minHeight: 38,
+    padding: '0 10px',
+  },
+  magicInput: {
+    border: '1px solid rgba(255,255,255,0.18)',
+    borderRadius: 6,
+    background: 'rgba(2,6,23,0.54)',
+    color: '#f8fafc',
+    minHeight: 38,
+    padding: '0 10px',
+    width: 70,
+  },
+};
 
 export default NavDrawer;

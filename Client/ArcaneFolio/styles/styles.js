@@ -1,18 +1,10 @@
-import { StyleSheet } from "react-native";
-
-const globalStyles = StyleSheet.create({
+/** @type {Record<string, import('react').CSSProperties>} */
+const globalStyles = {
     container: {
-        // flex: 1,
-        // justifyContent: "flex-start",
-        // alignItems: "center",
-        // padding: 10,
-        // backgroundColor: '#231F20'
-
-        
       },
 
       title: {
-        fontSize: 40,
+        fontSize: 50,
         color: "black",
         marginBottom: 50,
         marginTop: 50,
@@ -24,11 +16,11 @@ const globalStyles = StyleSheet.create({
       text: {
         color: '#231F20',
         fontSize: 18,
-        fontFamily: 'Courier',
+        fontFamily: 'Courier'
       }
 
 
 
-})
+};
 
 export default globalStyles

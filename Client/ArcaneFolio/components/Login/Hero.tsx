@@ -1,23 +1,23 @@
 import React from "react";
-import { Image, StyleSheet, View} from 'react-native'
+import wizard from '../../assets/images/wizard.webp';
 
 
 const Hero = () => { 
     return (
-        <View>
-            <Image source={require('../../assets/images/wizard.webp')} style={styles.image} />
-        </View>
-    )
+        <div>
+            <img src={typeof wizard === 'string' ? wizard : wizard.src} style={styles.image} alt="" />
+        </div>
+    );
 }
 
-const styles = StyleSheet.create({
+const styles: Record<string, React.CSSProperties> = {
     image: {
         width: '100%',
         height: 400,
+        objectFit: 'cover',
         marginBottom: 100,
     }
-
-})
+};
 
 
 export default Hero;

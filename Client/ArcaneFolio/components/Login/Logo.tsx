@@ -1,32 +1,27 @@
 import React from 'react'
-import { Image, StyleSheet, Text} from 'react-native'
+import spellbook from '../../assets/images/spellbook.jpg';
 
 
 
 const Logo = () => {
     return (
-        <Text style={styles.container}>
-            <Image source={require('../../assets/images/spellbook.jpg')} style={styles.image} />
-        </Text>
-    )
+        <span style={styles.container}>
+            <img src={typeof spellbook === 'string' ? spellbook : spellbook.src} style={styles.image} alt="" />
+        </span>
+    );
 }
 
 
-const styles = StyleSheet.create({
+const styles: Record<string, React.CSSProperties> = {
     container: {
-       
-        
-        
+        display: 'inline-flex',
     },
     image: {
         width: 60,
         height: 60,
-        
-        
+        objectFit: 'cover',
     }
-
-
-})
+};
 
 
 export default Logo

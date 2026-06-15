@@ -1,39 +1,28 @@
 import React from "react";
-import { View, Text, StyleSheet } from 'react-native';
-
-
 
 type HeaderWithCharacterProps = {
     characterName: string;
-    magicPoints: number
   };
 
-const CharacterHeader: React.FC<HeaderWithCharacterProps> = ({characterName, magicPoints}) => {
-
+const CharacterHeader: React.FC<HeaderWithCharacterProps> = ({characterName}) => {
     return (
-        <View style={styles.headerContainer}>
-            <Text style={styles.headerText}>{characterName}</Text>
-            <Text style={styles.text}>Magic Points: {magicPoints}</Text>
-        </View>
+        <header style={styles.headerContainer}>
+            <h2 style={styles.headerText}>{characterName}</h2>
+        </header>
     )
 }
 
-const styles = StyleSheet.create({ 
+const styles: Record<string, React.CSSProperties> = { 
     headerContainer: {
         padding: 10,
-        backgroundColor: '#231F20',
-        flexDirection: 'row',
-        justifyContent: 'space-between'
+        backgroundColor: '#6200ee',
       },
       headerText: {
         fontSize: 20,
         color: 'white',
+        textAlign: 'center',
       },
-      text: {
-        fontSize: 20,
-        color: 'white',
-      }
 
-})
+};
 
 export default CharacterHeader

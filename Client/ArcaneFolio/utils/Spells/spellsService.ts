@@ -1,123 +1,72 @@
-import axiosInstance from "../axiosInstance";
-import API_ENDPOINTS from '../apiConfig'
+import { apiFetch } from '../api';
+import { Spell } from '../../types/spellTypes';
 
+export const SPELL_SCHOOL_OPTIONS = [
+  'Abjuration',
+  'Alteration',
+  'Conjuration/Summoning',
+  'Enchantment/Charm',
+  'Greater Divination',
+  'Illusion',
+  'Invocation/Evocation',
+  'Necromancy',
+  'Lesser Divination',
+];
 
+export const SPELL_SCHOOL_FILTER_OPTIONS = [
+  'All',
+  ...SPELL_SCHOOL_OPTIONS,
+];
 
+export const PRIEST_SPELL_SPHERE_OPTIONS = [
+  'All',
+  'Animal',
+  'Astral',
+  'Charm',
+  'Combat',
+  'Creation',
+  'Divination',
+  'Elemental',
+  'Guardian',
+  'Healing',
+  'Necromantic',
+  'Plant',
+  'Protection',
+  'Summoning',
+  'Sun',
+  'Weather',
+];
 
-export const filterSpells = async (characterClass: string, level?: string, search?: string, spellbookId?: number) => {
-    
-    try{
-        const endpoint = API_ENDPOINTS.FILTER.replace(':characterClass', characterClass)
-        const URL = `${endpoint}?level=${level || '0'}${search ? `&search=${search}` : ''}${spellbookId ? `&spellbookId=${spellbookId}` : ''}`
-
-        const response = await axiosInstance.get(URL)
-       
-
-        if(!response || !response.data) throw new Error('Failed to filter spells')
-
-        return await response.data
-
-    }catch(err){
-        throw new Error(err)
-    }
-}
-
-
-
-export const fetchAllSpells = async () => {
-    try{
-        const response = await axiosInstance.get(API_ENDPOINTS.SPELLS)
-
-        if(!response) throw new Error('Failed to fetch spells')
-
-        return await response.data
-
-    }catch(err){
-        throw new Error('Fetch All Spells error: ',err)
-    }
-}
-
-export const removeSpellsFromSpellbook = async (spellbookId: number, spellId: number) => {
-    try{
-        const response = await axiosInstance.delete(`${API_ENDPOINTS.REMOVE_SPELL}/${spellbookId}/${spellId}`)
-
-        if(response.status === 200){
-            return {success: true, message: 'Spell Removed Successfully'}
-        }else{
-            return {success: false, message: 'Failed to remove spell'}
-        }
-
-    }catch(err){
-        console.error("Error in removing spell", err);
-        return { success: false, message: 'An error occurred while removing the spell' };
-    }
-}
-
-export const addSpellsToSpellbook = async (spellbookId: number, spellId: number) => {
-    try {
-        const endpoint = API_ENDPOINTS.ADD_SPELLS.replace(":spellbookId", spellbookId.toString());
-
-        const response = await axiosInstance.post(endpoint, { spellId });
-
-        if (response.status === 201) {
-            return { success: true, message: 'Spell added successfully', spellId, spell: response.data.updatedSpellbook };
-        } else if (response.status === 400) {
-            return { success: false, message: 'Spell already exists in Spellbook' };
-        } else {
-            return { success: false, message: 'Failed to add spell' };
-        }
-
-    } catch (err) {
-        console.error("Error in adding spell", err);
-        return { success: false, message: 'An error occurred while adding the spell' };
-    }
+export type SpellFilters = {
+  characterClass?: string;
+  level?: number;
+  school?: string;
+  search?: string;
 };
 
+const buildQuery = (filters?: SpellFilters) => {
+  const params = new URLSearchParams();
 
-export const fetchSpellbook = async(spellbookId: number) => {
-    try{
-        const endpoint = API_ENDPOINTS.FETCH_SPELLS.replace(':id', spellbookId.toString())
-        const response = await axiosInstance.get(endpoint)
-        
-        if(!response) throw new Error('Failed to fetch spells')
-        return response.data
-        
+  if (filters?.level) {
+    params.set('level', String(filters.level));
+  }
 
+  if (filters?.characterClass?.trim()) {
+    params.set('characterClass', filters.characterClass.trim());
+  }
 
-    }catch(err){
-        console.error('Fetch spellbook error', err)
-    }
-}
+  if (filters?.school?.trim()) {
+    params.set('school', filters.school.trim());
+  }
 
-export const getSpellsByClass = async(characterClass: string) => {
-    try{
-        const response = await axiosInstance.get(`${API_ENDPOINTS.SPELLS}/${characterClass}`)
-        if(!response) throw new Error('Failed to get spells')
-        return response.data
+  if (filters?.search?.trim()) {
+    params.set('search', filters.search.trim());
+  }
 
-    }catch(err){
-        console.error(err)
-    }
-}
+  const query = params.toString();
+  return query ? `?${query}` : '';
+};
 
-export const getSpellsBySchool = async(school: string) => {
-    try{
-        const response = await axiosInstance.get(`${API_ENDPOINTS.SPELLS}/school/${school}`)
-        if(!response) throw new Error('Failed to get spells')
-        return await response.data
-
-    }catch(err){
-        throw new Error(err)
-    }
-}
-
-export const getSpellsBySphere = async(sphere: string) => {
-    try{
-        const response = await axiosInstance.get(`${API_ENDPOINTS.SPELLS}/sphere/${sphere}`)
-        if(!response) throw new Error('Failed to get spells')
-        return await response.data
-
-    }catch(err){
-        throw new Error(err)
-    }
-}   
+export const getSpells = (filters?: SpellFilters) => {
+  return apiFetch<Spell[]>(`/spells${buildQuery(filters)}`);
+};

@@ -1,47 +1,80 @@
 import React from 'react';
-import { View, StyleSheet, Text } from 'react-native';
-import { TextInput as Input } from 'react-native-paper';
 
-type Props = React.ComponentProps<typeof Input> & {
+type Props = Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> & {
+    label?: string;
     errorText?: string;
-    onIconPress?: () => void;
     icon?: string;
+    onIconPress?: () => void;
+    onChangeText?: (value: string) => void;
+    secureTextEntry?: boolean;
 }
 
-const TextInput = ({errorText, icon, onIconPress, ...props}: Props) => {
+const TextInput = ({ errorText, icon, onIconPress, onChangeText, secureTextEntry, label, type, ...props }: Props) => {
     return (
-        <View style={styles.container}>
-           <Input
-            style={styles.input}
-            mode='outlined'
-            outlineColor='#231F20'
-            activeOutlineColor='#231F20'
-            right={icon ? <Input.Icon icon={icon} onPress={onIconPress} /> : undefined}
-            {...props}
-           />
-           {errorText ? <Text style={styles.error}>{errorText}</Text> : null}
-        </View>
+        <label style={styles.container}>
+            {label ? <span style={styles.label}>{label}</span> : null}
+            <span style={styles.inputWrap}>
+                <input
+                    {...props}
+                    type={secureTextEntry ? 'password' : type || 'text'}
+                    aria-invalid={Boolean(errorText)}
+                    onChange={(event) => onChangeText?.(event.target.value)}
+                    style={styles.input}
+                />
+                {icon ? (
+                    <button type="button" onClick={onIconPress} aria-label={secureTextEntry ? 'Show password' : 'Hide password'} style={styles.iconButton}>
+                        {secureTextEntry ? 'Show' : 'Hide'}
+                    </button>
+                ) : null}
+            </span>
+            {errorText ? <span style={styles.error}>{errorText}</span> : null}
+        </label>
 
-    )
-}
+    );
+};
 
-const styles = StyleSheet.create({
+const styles: Record<string, React.CSSProperties> = {
     container: {
-        marginVertical: 5,
-        width: '95%'
+        display: 'block',
+        margin: '8px 0',
+        width: '100%',
     }, 
-
+    label: {
+        color: '#231F20',
+        display: 'block',
+        fontSize: 14,
+        fontWeight: 700,
+        marginBottom: 6,
+    },
+    inputWrap: {
+        display: 'flex',
+        gap: 8,
+        width: '100%',
+    },
     input: {
+        border: '1px solid #231F20',
+        borderRadius: 8,
+        flex: 1,
         height: 50,
         width: '100%',
-        fontSize: 18
-
+        fontSize: 18,
+        padding: '0 12px',
     },
-
+    iconButton: {
+        border: '1px solid #231F20',
+        borderRadius: 8,
+        background: '#fff',
+        color: '#231F20',
+        cursor: 'pointer',
+        minWidth: 60,
+        padding: '0 10px',
+    },
     error: { 
+        display: 'block',
         color: 'red',
+        fontSize: 13,
+        marginTop: 4,
     }
+};
 
-})
-
-export default TextInput
+export default TextInput;

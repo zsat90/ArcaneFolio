@@ -17,7 +17,7 @@ export class SpellsService {
         where.spellbookId = spellbookId
       }
 
-      if(level){
+      if(level !== undefined){
         where.level = level
       }
 
@@ -76,9 +76,24 @@ export class SpellsService {
     }
   }
 
-  async getAllSpells() {
+  async getAllSpells(filterSpellsDto?: FilterSpellsDto) {
     try {
+      const {level, search} = filterSpellsDto ?? {}
+      const where: any = {}
+
+      if(level !== undefined){
+        where.level = level
+      }
+
+      if(search){
+        where.name = {
+          contains: search,
+          mode: 'insensitive'
+        }
+      }
+
       return await this.prisma.spell.findMany({
+        where,
         orderBy: [
         {
           name: 'asc',

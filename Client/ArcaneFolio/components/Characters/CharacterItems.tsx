@@ -1,191 +1,103 @@
-import React, { useRef } from "react";
-import { View, StyleSheet, Text, TouchableOpacity, Alert } from "react-native";
-import { Character } from "@/types/characterTypes";
-import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
-import Reanimated, {
-  SharedValue,
-  useAnimatedStyle,
-} from "react-native-reanimated";
-import Icon from "react-native-vector-icons/MaterialIcons";
-import Toast from 'react-native-toast-message'
-import { useAppDispatch } from "../../redux/hooks";
-import {
-  selectCharacter,
-  deleteCharacter,
-} from "@/redux/slices/characterSlice";
+import React from "react";
+import {handleCharacterSelect} from '../../utils/character/CharacterActions'
 
-interface CharacterItemProps {
-  item: Character;
-  navigation: any;
-}
-
-const CharacterItem: React.FC<CharacterItemProps> = ({ item, navigation }) => {
-  const dispatch = useAppDispatch()
-  const swipeableRef = useRef(null);
-
-  const handleSelectCharacter = async () => {
-    dispatch(selectCharacter(item))
-    navigation.navigate('Dashboard')
-  };
-
-  const handleEditCharacter = (characterId: number) => {
-    dispatch(selectCharacter(item))
-    swipeableRef.current?.close()
-    navigation.navigate('EditCharacter', {characterId})
-  };
-
-  const handleDeletePress = () => {
-    Alert.alert(
-      "Delete Character",
-      `Are you sure you want to delete ${item.name}?`,
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              dispatch(deleteCharacter(item.id))
-              Toast.show({
-                type: 'success',
-                text1: `${item.name} deleted successfully`,
-                visibilityTime: 3000
-              })
-            } catch (error) {
-              console.error("Failed to delete character:", error);
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const RightAction = (
-    progress: SharedValue<number>,
-    drag: SharedValue<number>
-  ) => {
-    const animatedStyle = useAnimatedStyle(() => {
-      return {
-        transform: [{ translateX: drag.value + 140 }],
-      };
-    });
-
-    return (
-      <Reanimated.View style={[animatedStyle, styles.rightActionContainer]}>
-        <Reanimated.View style={styles.iconButton1}>
-          <Text style={styles.actionText} onPress={() => handleEditCharacter(item.id)}>
-            <Icon name="edit" size={30} />
-          </Text>
-        </Reanimated.View>
-
-        <Reanimated.View style={styles.iconButton2}>
-          <Text style={styles.actionText} onPress={handleDeletePress}>
-            <Icon name="delete" size={30} />
-          </Text>
-        </Reanimated.View>
-      </Reanimated.View>
-    );
-  };
-
+const CharacterItem = ({ item, navigation, setSelectedCharacter, onDelete }) => {
   return (
-    <ReanimatedSwipeable
-      ref={swipeableRef}
-      friction={2}
-      enableTrackpadTwoFingerGesture
-      rightThreshold={40}
-      renderRightActions={RightAction}
-    >
-      <TouchableOpacity onPress={handleSelectCharacter}>
-        <View style={styles.characterItem}>
-          <View style={styles.textContainer}>
-            <Text style={styles.characterName}>{item.name}</Text>
-            <Text style={styles.characterClass}>
-              Class: {item.characterClass}
-            </Text>
-            <Text style={styles.characterLevel}>Level: {item.level}</Text>
-          </View>
-        </View>
-      </TouchableOpacity>
-    </ReanimatedSwipeable>
+    <div style={styles.characterItem}>
+      <div style={styles.textContainer}>
+        <div>
+          <strong style={styles.characterName}>{item.name}</strong>
+          <span style={styles.characterClass}>{item.class}</span>
+        </div>
+        <div style={styles.metaRow}>
+          {item.level && <span style={styles.metaPill}>Level {item.level}</span>}
+          <span style={styles.metaPill}>{item.magicPoints ?? 0}/{item.maxMagicPoints ?? item.magicPoints ?? 0} MP</span>
+          <span style={styles.metaPill}>{item.hitPoints ?? 0}/{item.maxHitPoints ?? item.hitPoints ?? 0} HP</span>
+        </div>
+      </div>
+      <div style={styles.actions}>
+        <button type="button" style={styles.button} onClick={() => handleCharacterSelect(item, navigation, setSelectedCharacter)}>
+          Select
+        </button>
+        <button type="button" style={styles.killButton} onClick={() => onDelete?.(item)}>
+          Kill
+        </button>
+      </div>
+    </div>
   );
 };
 
-const styles = StyleSheet.create({
+const styles: Record<string, React.CSSProperties> = {
   characterItem: {
-    flexDirection: "row",
-    justifyContent: "space-evenly",
-    padding: 15,
-    marginBottom: 15,
-    marginTop: 15,
-    backgroundColor: "#ffffff",
-    borderRadius: 10,
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.5,
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 16,
+    padding: 18,
+    backgroundColor: "rgba(15,23,42,0.88)",
+    border: "1px solid rgba(255,255,255,0.12)",
+    borderRadius: 8,
+    boxShadow: "0 14px 36px rgba(0,0,0,0.22)",
     alignItems: "center",
-    height: 90,
   },
 
   textContainer: {
     flex: 1,
     paddingRight: 10,
-    marginTop: 5,
+    display: "grid",
+    gap: 12,
   },
   characterName: {
-    fontSize: 18,
+    color: "#f8fafc",
+    display: "block",
+    fontSize: 22,
     fontWeight: "bold",
-    marginBottom: 5,
   },
   characterClass: {
+    color: "#a9fff7",
+    display: "block",
     fontSize: 14,
-    color: "gray",
-    marginBottom: 5,
+    fontWeight: 800,
+    marginTop: 4,
   },
-
-  characterLevel: {
-    fontSize: 14,
-    color: "gray",
+  button: {
+    backgroundColor: "rgba(169,255,247,0.12)",
+    border: "1px solid rgba(169,255,247,0.38)",
+    borderRadius: 6,
+    color: "#a9fff7",
+    cursor: "pointer",
+    fontWeight: 800,
+    minHeight: 40,
+    padding: "0 16px",
   },
-
-  rightActionContainer: {
-    justifyContent: "center",
-    alignItems: "center",
-    flexDirection: "row",
+  actions: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 8,
+    justifyContent: "flex-end",
   },
-
-  actionText: {
-    color: "white",
-    fontWeight: "bold",
-    fontSize: 18,
-    textAlign: "center",
+  killButton: {
+    backgroundColor: "rgba(127,29,29,0.38)",
+    border: "1px solid rgba(248,113,113,0.45)",
+    borderRadius: 6,
+    color: "#fecaca",
+    cursor: "pointer",
+    fontWeight: 800,
+    minHeight: 40,
+    padding: "0 14px",
   },
-
-  iconButton1: {
-    backgroundColor: "green",
-    height: 85,
-    width: 70,
-    borderTopLeftRadius: 5,
-    borderBottomLeftRadius: 5,
-    justifyContent: "center",
-    alignItems: "center",
+  metaRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 8,
   },
-  iconButton2: {
-    backgroundColor: "#e0040c",
-    height: 85,
-    width: 70,
-    borderTopRightRadius: 10,
-    borderBottomRightRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
+  metaPill: {
+    border: "1px solid rgba(212,175,55,0.32)",
+    borderRadius: 999,
+    color: "#fde68a",
+    fontSize: 13,
+    fontWeight: 800,
+    padding: "5px 9px",
   },
-});
+};
 
 export default CharacterItem;

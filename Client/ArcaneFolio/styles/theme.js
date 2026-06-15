@@ -1,8 +1,4 @@
-import {defaultTheme} from 'react-native-paper'
-
-
 const theme = {
-    ...defaultTheme,
     fonts: {
         regular: {
           fontFamily: 'Aria',
