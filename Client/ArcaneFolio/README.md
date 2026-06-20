@@ -1,6 +1,6 @@
-# Arcane Folio
+# Adventurer's Codex
 
-Arcane Folio is a Next.js web app deployed on Vercel.
+Adventurer's Codex is a Next.js web app deployed on Vercel.
 
 ## Development
 

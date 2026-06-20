@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { logout } from '../../utils/auth/authService';
 import {
-  addMagicPoints,
+  clearSessionCharacterState,
   damageSelectedCharacter,
   healSelectedCharacter,
   restSelectedCharacter,
@@ -15,15 +15,15 @@ const NavDrawer = () => {
   const selectedCharacter = useSelectedCharacter();
   const [damageAmount, setDamageAmount] = useState('');
   const [healAmount, setHealAmount] = useState('');
-  const [magicAmount, setMagicAmount] = useState('');
 
   const handleLogout = async () => {
+    clearSessionCharacterState();
+
     try {
       await logout();
     } catch {
       // Route away even if Firebase is unavailable in the current environment.
     }
-
     router.push('/login');
   };
 
@@ -46,21 +46,12 @@ const NavDrawer = () => {
     setHealAmount('');
   };
 
-  const handleAddMagic = () => {
-    addMagicPoints(parseAmount(magicAmount));
-    setMagicAmount('');
-  };
-
   const updateDamageAmount = (event: ChangeEvent<HTMLInputElement>) => {
     setDamageAmount(event.target.value);
   };
 
   const updateHealAmount = (event: ChangeEvent<HTMLInputElement>) => {
     setHealAmount(event.target.value);
-  };
-
-  const updateMagicAmount = (event: ChangeEvent<HTMLInputElement>) => {
-    setMagicAmount(event.target.value);
   };
 
   return (
@@ -114,19 +105,6 @@ const NavDrawer = () => {
                 <strong style={styles.resourceValue}>
                   {selectedCharacter.magicPoints ?? 0}/{selectedCharacter.maxMagicPoints ?? selectedCharacter.magicPoints ?? 0}
                 </strong>
-              </div>
-              <div style={styles.resourceActions}>
-                <input
-                  aria-label="Magic point amount"
-                  inputMode="numeric"
-                  onChange={updateMagicAmount}
-                  placeholder="MP"
-                  style={styles.resourceInput}
-                  value={magicAmount}
-                />
-                <button type="button" onClick={handleAddMagic} style={styles.magicButton}>
-                  Add MP
-                </button>
               </div>
             </div>
             <button type="button" onClick={handleRest} style={styles.restButton}>
@@ -257,16 +235,6 @@ const styles: Record<string, React.CSSProperties> = {
     minHeight: 30,
     padding: '0 8px',
   },
-  magicButton: {
-    border: '1px solid rgba(169,255,247,0.35)',
-    borderRadius: 6,
-    background: 'rgba(8,47,73,0.46)',
-    color: '#a9fff7',
-    cursor: 'pointer',
-    fontWeight: 800,
-    minHeight: 30,
-    padding: '0 8px',
-  },
   restButton: {
     border: '1px solid rgba(74,222,128,0.42)',
     borderRadius: 6,
@@ -276,25 +244,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 800,
     minHeight: 38,
     padding: '0 12px',
-  },
-  addButton: {
-    border: '1px solid rgba(169,255,247,0.35)',
-    borderRadius: 6,
-    background: 'rgba(8,47,73,0.46)',
-    color: '#a9fff7',
-    cursor: 'pointer',
-    fontWeight: 800,
-    minHeight: 38,
-    padding: '0 10px',
-  },
-  magicInput: {
-    border: '1px solid rgba(255,255,255,0.18)',
-    borderRadius: 6,
-    background: 'rgba(2,6,23,0.54)',
-    color: '#f8fafc',
-    minHeight: 38,
-    padding: '0 10px',
-    width: 70,
   },
 };
 

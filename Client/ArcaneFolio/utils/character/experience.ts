@@ -221,7 +221,14 @@ const RUNEIST_ROWS: ExperienceRow[] = [
 export const formatExperience = (value: number) => value.toLocaleString('en-US');
 
 export const parseExperience = (value: string) => {
-  const parsed = Number(value.replace(/,/g, '').trim());
+  const trimmed = value.replace(/,/g, '').trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  const parsed = Number(trimmed);
+
   return Number.isFinite(parsed) ? parsed : null;
 };
 

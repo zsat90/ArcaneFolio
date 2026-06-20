@@ -52,6 +52,9 @@ const weapon = (
 });
 
 const WEAPON_ITEMS: EquipmentItem[] = [
+  weapon('Soul Sword - Sirus', '', '', 'M', 'S', '5', '3d8', '3d8'),
+  weapon('Soul Sword - Aelrik', '', '', 'M', 'S', '5', '3d8', '3d8'),
+  weapon('Soul Sword - Balthrong', '', '', 'M', 'S', '5', '3d8', '3d8'),
   weapon('Arquebus', '500 gp', '10', 'M', 'P', '15', '1d10', '1d10'),
   weapon('Battle axe', '5 gp', '7', 'M', 'S', '7', '1d8', '1d8'),
   weapon('Blowgun', '5 gp', '2', 'L', '', '5', '', ''),
@@ -466,6 +469,7 @@ export default function EquipmentListPanel({ onEquipLine, actionLabel = 'Equip' 
   const selectedCharacter = useSelectedCharacter();
   const activeItems = EQUIPMENT_ITEMS[activeCategory] ?? [];
   const noticeIsError = notice.toLowerCase().includes('not enough') || notice.toLowerCase().includes('select or create');
+  const isSoulSword = (item: EquipmentItem) => item.name.toLowerCase().startsWith('soul sword - ');
 
   const addEquipmentLine = (item: EquipmentItem, itemLine: string, equipmentBucket: string) => {
     if (onEquipLine) {
@@ -502,8 +506,9 @@ export default function EquipmentListPanel({ onEquipLine, actionLabel = 'Equip' 
     if (activeCategory === 'Armor' || activeCategory === 'Helms' || activeCategory === 'Shields' || activeCategory === 'Weapons') {
       setPendingMagicalItem(item);
       setPendingMagicalCategory(activeCategory);
-      setIsMagicalItem(false);
-      setMagicModifier('1');
+      const soulSword = activeCategory === 'Weapons' && isSoulSword(item);
+      setIsMagicalItem(soulSword);
+      setMagicModifier(soulSword ? '3' : '1');
       setNotice('');
       return;
     }

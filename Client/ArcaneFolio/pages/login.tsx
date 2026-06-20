@@ -50,8 +50,11 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      await signInWithGoogle();
-      router.push('/characters');
+      const signInMode = await signInWithGoogle();
+
+      if (signInMode === 'popup') {
+        router.push('/characters');
+      }
     } catch (error) {
       setFormError(getAuthErrorMessage(error));
     } finally {

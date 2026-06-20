@@ -1,6 +1,14 @@
+import { createEmptyPartyTreasureCoins } from './partyTreasure';
+import { getDexterityModifierSummary } from './abilityScores';
+
+import { getScopedStorageKey } from '../auth/accountScope';
+import { getCachedSheet, persistSheet, setCachedSheet } from '../firestore/characterDataCache';
+
 export type WeaponRow = {
   id: string;
   weapon: string;
+  soulSwordColor: string;
+  soulSwordIgnited: boolean;
   wac: string;
   thacoWeaponBonus: string;
   thacoStrengthBonus: string;
@@ -114,7 +122,10 @@ export type CharacterSheetState = {
   savingThrowDetails: Record<string, string>;
   equipmentDetails: Record<string, string>;
   xpAwardRows: XPAwardRow[];
+  xpValuablesArrows: string;
   xpValuablesNotes: string;
+  partyTreasureCoins: Record<string, string>;
+  partyTreasureNotes: string;
 };
 
 export const SHEET_STORAGE_KEY = 'arcane:character-sheets';
@@ -165,6 +176,7 @@ export const ABILITY_DETAIL_FIELDS = [
   'Piety',
 ];
 export const COMBAT_DETAIL_FIELDS = ['Base class Att/Rnd', 'SP', 'Base THACO', 'MP', 'LP', 'Shirt LP'];
+export const DEFAULT_BASE_THACO = '20';
 export const EXPERIENCE_DETAIL_FIELDS = ['Current', 'Bonus', 'Next XP Target', 'To Reach Level'];
 export const HIT_POINT_DETAIL_FIELDS = ['Per Level', 'HP Roll', 'Adjustment', 'Total HP'];
 export const ARMOR_DETAIL_FIELDS = ['Base', 'Armor Type', 'Helm', 'Shield', 'Magical', 'Real'];
@@ -294,6 +306,8 @@ const SAVING_THROW_DEFAULTS: Array<[string, string]> = [
 const createEmptyWeaponRow = (id: string): WeaponRow => ({
   id,
   weapon: '',
+  soulSwordColor: '',
+  soulSwordIgnited: false,
   wac: '',
   thacoWeaponBonus: '',
   thacoStrengthBonus: '',
@@ -313,8 +327,6 @@ const createEmptyWeaponRow = (id: string): WeaponRow => ({
 
 export const createEmptyWeaponRows = () => [
   createEmptyWeaponRow('weapon-1'),
-  createEmptyWeaponRow('weapon-2'),
-  createEmptyWeaponRow('weapon-3'),
 ];
 
 const createEmptyProficiencyRow = (id: string): ProficiencyRow => ({
@@ -440,6 +452,7 @@ export const createEmptySheet = (): CharacterSheetState => ({
   combatDetails: {
     ...makeRecord(COMBAT_DETAIL_FIELDS),
     'Base class Att/Rnd': '1/1',
+    'Base THACO': DEFAULT_BASE_THACO,
   },
   experienceDetails: makeRecord(EXPERIENCE_DETAIL_FIELDS),
   hitPointDetails: makeRecord(HIT_POINT_DETAIL_FIELDS),
@@ -475,7 +488,10 @@ export const createEmptySheet = (): CharacterSheetState => ({
     }, {}),
   },
   xpAwardRows: createEmptyXPAwardRows(),
+  xpValuablesArrows: '',
   xpValuablesNotes: '',
+  partyTreasureCoins: createEmptyPartyTreasureCoins(),
+  partyTreasureNotes: '',
 });
 
 export const normalizeSheet = (sheet?: Partial<CharacterSheetState>): CharacterSheetState => {
@@ -520,6 +536,7 @@ export const normalizeSheet = (sheet?: Partial<CharacterSheetState>): CharacterS
     combatDetails: {
       ...emptySheet.combatDetails,
       ...(sheet?.combatDetails ?? {}),
+      'Base THACO': sheet?.combatDetails?.['Base THACO']?.trim() || DEFAULT_BASE_THACO,
     },
     experienceDetails: {
       ...emptySheet.experienceDetails,
@@ -605,38 +622,40 @@ export const normalizeSheet = (sheet?: Partial<CharacterSheetState>): CharacterS
         ...row,
       }))
       : emptySheet.xpAwardRows,
+    xpValuablesArrows: sheet?.xpValuablesArrows ?? '',
     xpValuablesNotes: sheet?.xpValuablesNotes ?? '',
+    partyTreasureCoins: {
+      ...emptySheet.partyTreasureCoins,
+      ...(sheet?.partyTreasureCoins ?? {}),
+    },
+    partyTreasureNotes: sheet?.partyTreasureNotes ?? '',
   };
 };
 
 const canUseStorage = () => typeof window !== 'undefined';
+const resolveSheetStorageKey = () => getScopedStorageKey(SHEET_STORAGE_KEY);
 
+/** @deprecated Firestore is source of truth. Returns in-memory cache snapshot only. */
 export const readCharacterSheets = () => {
-  if (!canUseStorage()) {
-    return {};
-  }
-
-  try {
-    return JSON.parse(window.localStorage.getItem(SHEET_STORAGE_KEY) || '{}') as Record<string, CharacterSheetState>;
-  } catch {
-    return {};
-  }
+  return {};
 };
 
-export const writeCharacterSheets = (sheets: Record<string, CharacterSheetState>) => {
-  if (canUseStorage()) {
-    window.localStorage.setItem(SHEET_STORAGE_KEY, JSON.stringify(sheets));
-  }
+/** @deprecated Firestore is source of truth. */
+export const writeCharacterSheets = (_sheets: Record<string, CharacterSheetState>) => {
+  // no-op: sheets persist to Firestore via setCharacterSheet
 };
 
-export const getCharacterSheet = (characterId: number) => {
-  return normalizeSheet(readCharacterSheets()[String(characterId)]);
-};
+export const getCharacterSheet = (characterId: number) => (
+  normalizeSheet(getCachedSheet(characterId) ?? createEmptySheet())
+);
 
 export const setCharacterSheet = (characterId: number, sheet: CharacterSheetState) => {
-  const sheets = readCharacterSheets();
-  sheets[String(characterId)] = sheet;
-  writeCharacterSheets(sheets);
+  const normalized = normalizeSheet(sheet);
+  setCachedSheet(characterId, normalized);
+
+  void persistSheet(characterId, normalized).catch((error: unknown) => {
+    console.error('[character-sheet] Failed to persist sheet to Firestore', error);
+  });
 
   if (canUseStorage()) {
     window.dispatchEvent(new Event('arcane-character-change'));
@@ -670,27 +689,6 @@ const strengthSummary = (score: number) => {
   if (score === 23) return '+5 hit, +11 damage';
   if (score === 24) return '+6 hit, +12 damage';
   return '+7 hit, +14 damage';
-};
-
-const dexteritySummary = (score: number) => {
-  const parry = `Parry ${Math.ceil(score / 2)}`;
-
-  if (score <= 3) return `+4 AC, -3 missile/reaction, ${parry}`;
-  if (score === 4) return `+3 AC, -2 missile/reaction, ${parry}`;
-  if (score === 5) return `+2 AC, -1 missile/reaction, ${parry}`;
-  if (score === 6) return `+1 AC, ${parry}`;
-  if (score <= 14) return `No adjustment, ${parry}`;
-  if (score === 15) return `-1 AC, ${parry}`;
-  if (score === 16) return `-2 AC, +1 missile/reaction, ${parry}`;
-  if (score === 17) return `-3 AC, +2 missile/reaction, ${parry}`;
-  if (score === 18) return `-4 AC, +2 missile/reaction, ${parry}`;
-  if (score === 19) return `-4 AC, +3 missile/reaction, ${parry}`;
-  if (score === 20) return `-4 AC, +3 missile/reaction, ${parry}`;
-  if (score === 21) return `-5 AC, +4 missile/reaction, ${parry}`;
-  if (score === 22) return `-5 AC, +4 missile/reaction, ${parry}`;
-  if (score === 23) return `-5 AC, +4 missile/reaction, ${parry}`;
-  if (score === 24) return `-6 AC, +5 missile/reaction, ${parry}`;
-  return `-6 AC, +5 missile/reaction, ${parry}`;
 };
 
 const constitutionSummary = (score: number) => {
@@ -731,7 +729,7 @@ const charismaSummary = (score: number) => {
   return `${signed(reaction)} reaction adjustment`;
 };
 
-export const getAbilityModifierSummary = (ability: string, score: string) => {
+export const getAbilityModifierSummary = (ability: string, score: string, characterClass = '') => {
   const value = scoreNumber(score);
 
   if (!Number.isFinite(value) || value <= 0) {
@@ -739,7 +737,7 @@ export const getAbilityModifierSummary = (ability: string, score: string) => {
   }
 
   if (ability === 'Strength') return strengthSummary(value);
-  if (ability === 'Dexterity') return dexteritySummary(value);
+  if (ability === 'Dexterity') return getDexterityModifierSummary(characterClass, value);
   if (ability === 'Constitution') return constitutionSummary(value);
   if (ability === 'Intelligence') return intelligenceSummary(value);
   if (ability === 'Wisdom') return wisdomSummary(value);

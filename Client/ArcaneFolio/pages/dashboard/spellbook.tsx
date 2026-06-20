@@ -63,8 +63,17 @@ export default function SpellBookPage() {
         return filterGroups.some((spellSchool) => spellSchool === school);
       })
       .filter((spell) => !search || spell.name.toLowerCase().includes(search))
-      .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, [spellSearch, selectedLevel, selectedSchool, spellbookIds, spells]);
+
+  const groupedSpellbookSpells = useMemo(() => (
+    spellbookSpells.reduce<Record<number, Spell[]>>((groups, spell) => {
+      groups[spell.level] = groups[spell.level] ?? [];
+      groups[spell.level].push(spell);
+
+      return groups;
+    }, {})
+  ), [spellbookSpells]);
 
   useEffect(() => {
     setSelectedSchool('All');
@@ -138,56 +147,64 @@ export default function SpellBookPage() {
           </p>
         )}
 
-        <div style={styles.spellList}>
-          {spellbookSpells.map((spell) => (
-            <article key={spell.id} style={styles.spellItem}>
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={() => setExpandedSpellId(expandedSpellId === spell.id ? null : spell.id)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    setExpandedSpellId(expandedSpellId === spell.id ? null : spell.id);
-                  }
-                }}
-                style={styles.spellRow}
-                aria-expanded={expandedSpellId === spell.id}
-              >
-                <span style={styles.spellName}>{spell.name}</span>
-                <span style={styles.rowMeta}>Lvl {spell.level}</span>
-                <span style={styles.rowMeta}>{spell.characterClass}</span>
-                <span style={styles.rowMeta}>{spell.schools.concat(spell.spheres).filter(Boolean).join(', ') || 'Unaligned'}</span>
-                <span style={styles.rowMeta}>{spell.castingTime ? `Cast ${spell.castingTime}` : 'Cast --'}</span>
-                <span style={styles.cost}>{formatMagicPointCost(spell.magicPointCost)}</span>
-                <button type="button" onClick={(event) => { event.stopPropagation(); handleCastSpell(spell); }} style={styles.castButton}>
-                  Cast
-                </button>
-                <button type="button" onClick={(event) => { event.stopPropagation(); handleRemoveSpell(spell); }} style={styles.removeButton}>
-                  Remove
-                </button>
-                <span style={styles.toggle}>{expandedSpellId === spell.id ? '-' : '+'}</span>
-              </div>
+        <div style={styles.spellGroups}>
+          {Object.entries(groupedSpellbookSpells)
+            .sort(([a], [b]) => Number(a) - Number(b))
+            .map(([level, levelSpells]) => (
+              <section key={level} style={styles.levelGroup}>
+                <h3 style={styles.levelTitle}>Level {level}</h3>
+                <div style={styles.spellList}>
+                  {levelSpells.map((spell) => (
+                    <article key={spell.id} style={styles.spellItem}>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setExpandedSpellId(expandedSpellId === spell.id ? null : spell.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            setExpandedSpellId(expandedSpellId === spell.id ? null : spell.id);
+                          }
+                        }}
+                        style={styles.spellRow}
+                        aria-expanded={expandedSpellId === spell.id}
+                      >
+                        <span style={styles.spellName}>{spell.name}</span>
+                        <span style={styles.rowMeta}>{spell.characterClass}</span>
+                        <span style={styles.rowMeta}>{spell.schools.concat(spell.spheres).filter(Boolean).join(', ') || 'Unaligned'}</span>
+                        <span style={styles.rowMeta}>{spell.castingTime ? `Cast ${spell.castingTime}` : 'Cast --'}</span>
+                        <span style={styles.cost}>{formatMagicPointCost(spell.magicPointCost)}</span>
+                        <button type="button" onClick={(event) => { event.stopPropagation(); handleCastSpell(spell); }} style={styles.castButton}>
+                          Cast
+                        </button>
+                        <button type="button" onClick={(event) => { event.stopPropagation(); handleRemoveSpell(spell); }} style={styles.removeButton}>
+                          Remove
+                        </button>
+                        <span style={styles.toggle}>{expandedSpellId === spell.id ? '-' : '+'}</span>
+                      </div>
 
-              {expandedSpellId === spell.id && (
-                <div style={styles.expandedPanel}>
-                  <div style={styles.detailGrid}>
-                    <div style={styles.detailCell}><span style={styles.detailLabel}>Components</span><span style={styles.detailValue}>{spell.components.join(', ') || 'None'}</span></div>
-                    <div style={styles.detailCell}><span style={styles.detailLabel}>Casting Time</span><span style={styles.detailValue}>{spell.castingTime || 'None'}</span></div>
-                    <div style={styles.detailCell}><span style={styles.detailLabel}>Casting Word</span><span style={styles.detailValue}>{spell.castingWord || 'None'}</span></div>
-                    <div style={styles.detailCell}><span style={styles.detailLabel}>Word Meaning</span><span style={styles.detailValue}>{spell.castNameMeaning || 'None'}</span></div>
-                    <div style={styles.detailCell}><span style={styles.detailLabel}>Range</span><span style={styles.detailValue}>{spell.range || 'Self'}</span></div>
-                    <div style={styles.detailCell}><span style={styles.detailLabel}>Area</span><span style={styles.detailValue}>{spell.areaOfEffect || 'None'}</span></div>
-                    <div style={styles.detailCell}><span style={styles.detailLabel}>Save</span><span style={styles.detailValue}>{spell.save || 'None'}</span></div>
-                  </div>
-                  <section style={styles.descriptionPanel}>
-                    <h4 style={styles.descriptionTitle}>Description</h4>
-                    <p style={styles.description}>{spell.description}</p>
-                  </section>
+                      {expandedSpellId === spell.id && (
+                        <div style={styles.expandedPanel}>
+                          <div style={styles.detailGrid}>
+                            <div style={styles.detailCell}><span style={styles.detailLabel}>Components</span><span style={styles.detailValue}>{spell.components.join(', ') || 'None'}</span></div>
+                            <div style={styles.detailCell}><span style={styles.detailLabel}>Casting Time</span><span style={styles.detailValue}>{spell.castingTime || 'None'}</span></div>
+                            <div style={styles.detailCell}><span style={styles.detailLabel}>Casting Word</span><span style={styles.detailValue}>{spell.castingWord || 'None'}</span></div>
+                            <div style={styles.detailCell}><span style={styles.detailLabel}>Word Meaning</span><span style={styles.detailValue}>{spell.castNameMeaning || 'None'}</span></div>
+                            <div style={styles.detailCell}><span style={styles.detailLabel}>Range</span><span style={styles.detailValue}>{spell.range || 'Self'}</span></div>
+                            <div style={styles.detailCell}><span style={styles.detailLabel}>Area</span><span style={styles.detailValue}>{spell.areaOfEffect || 'None'}</span></div>
+                            <div style={styles.detailCell}><span style={styles.detailLabel}>Save</span><span style={styles.detailValue}>{spell.save || 'None'}</span></div>
+                          </div>
+                          <section style={styles.descriptionPanel}>
+                            <h4 style={styles.descriptionTitle}>Description</h4>
+                            <p style={styles.description}>{spell.description}</p>
+                          </section>
+                        </div>
+                      )}
+                    </article>
+                  ))}
                 </div>
-              )}
-            </article>
-          ))}
+              </section>
+            ))}
         </div>
       </div>
     </ImageBackgroundWrapper>
@@ -231,12 +248,25 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#f8fafc',
     outline: 'none',
   },
+  spellGroups: {
+    display: 'grid',
+    gap: 16,
+    marginTop: 16,
+    paddingBottom: 48,
+  },
+  levelGroup: {
+    display: 'grid',
+    gap: 8,
+  },
+  levelTitle: {
+    color: '#d4af37',
+    fontSize: 16,
+    margin: 0,
+  },
   spellList: {
     display: 'flex',
     flexDirection: 'column',
     gap: 8,
-    marginTop: 16,
-    paddingBottom: 48,
   },
   spellItem: {
     border: '1px solid rgba(255,255,255,0.12)',
@@ -251,7 +281,7 @@ const styles: Record<string, React.CSSProperties> = {
     minWidth: 960,
     minHeight: 54,
     display: 'grid',
-    gridTemplateColumns: 'minmax(210px, 1.5fr) 72px 110px minmax(170px, 1fr) minmax(110px, 0.7fr) 80px 76px 92px 32px',
+    gridTemplateColumns: 'minmax(210px, 1.5fr) 110px minmax(170px, 1fr) minmax(110px, 0.7fr) 80px 76px 92px 32px',
     alignItems: 'center',
     gap: 12,
     color: '#f8fafc',

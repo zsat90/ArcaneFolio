@@ -2,6 +2,10 @@ import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useSelectedCharacter } from '../utils/character/characterState';
+import {
+  canUseSpellbook,
+  SPELLBOOK_UNAVAILABLE_MESSAGE,
+} from '../utils/character/spellAccess';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -11,7 +15,9 @@ export default function DashboardPage() {
     ? selectedCharacterParam[0]
     : selectedCharacterParam;
   const characterName = selectedCharacter || persistedCharacter?.name || 'Select a Character';
-  const characterClass = persistedCharacter?.characterClass || persistedCharacter?.class;
+  const hasSelectedCharacter = Boolean(persistedCharacter);
+  const characterClass = persistedCharacter?.characterClass || persistedCharacter?.class || '';
+  const canOpenSpellbook = canUseSpellbook(characterClass);
   const magicPoints = persistedCharacter
     ? `${persistedCharacter.magicPoints ?? 0}/${persistedCharacter.maxMagicPoints ?? persistedCharacter.magicPoints ?? 0} MP`
     : null;
@@ -23,10 +29,10 @@ export default function DashboardPage() {
     <main style={{ minHeight: '100vh', backgroundColor: '#0B1120', color: '#fff' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 16px' }}>
         <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, marginBottom: 32 }}>
-          <span style={{ color: '#A9FFF7', fontWeight: 800 }}>Arcane Folio</span>
+          <span style={{ color: '#A9FFF7', fontWeight: 800 }}>Adventurer's Codex</span>
           <div style={styles.headerActions}>
             <Link href="/characters" legacyBehavior>
-              <a style={styles.switchLink}>Switch Character</a>
+              <a style={styles.switchLink}>{hasSelectedCharacter ? 'Switch Character' : 'Add Character'}</a>
             </Link>
             <Link href="/login" legacyBehavior>
               <a style={styles.logoutLink}>Logout</a>
@@ -51,24 +57,38 @@ export default function DashboardPage() {
         </section>
 
         <section style={styles.cardGrid}>
-          <Link href="/dashboard/character-sheet" legacyBehavior>
-            <a style={styles.dashboardCard}>
-              <span style={styles.cardTitle}>Character Sheet</span>
-              <span style={styles.cardText}>Edit this character's core stats, saves, gear, and notes.</span>
-            </a>
-          </Link>
+          {hasSelectedCharacter ? (
+            <Link href="/dashboard/character-sheet" legacyBehavior>
+              <a style={styles.dashboardCard}>
+                <span style={styles.cardTitle}>Character Sheet</span>
+                <span style={styles.cardText}>Edit this character's core stats, saves, gear, and notes.</span>
+              </a>
+            </Link>
+          ) : (
+            <div style={{ ...styles.dashboardCard, ...styles.disabledDashboardCard }} aria-disabled="true">
+              <span style={{ ...styles.cardTitle, ...styles.disabledCardTitle }}>Character Sheet</span>
+              <span style={styles.cardText}>Create or select a character first.</span>
+            </div>
+          )}
           <Link href="/dashboard/spells" legacyBehavior>
             <a style={styles.dashboardCard}>
               <span style={styles.cardTitle}>Browse Spells</span>
               <span style={styles.cardText}>Search and filter the spell list.</span>
             </a>
           </Link>
-          <Link href="/dashboard/spellbook" legacyBehavior>
-            <a style={styles.dashboardCard}>
-              <span style={styles.cardTitle}>Spell Book</span>
-              <span style={styles.cardText}>Review this character's prepared spells.</span>
-            </a>
-          </Link>
+          {canOpenSpellbook ? (
+            <Link href="/dashboard/spellbook" legacyBehavior>
+              <a style={styles.dashboardCard}>
+                <span style={styles.cardTitle}>Spell Book</span>
+                <span style={styles.cardText}>Review this character's prepared spells.</span>
+              </a>
+            </Link>
+          ) : (
+            <div style={{ ...styles.dashboardCard, ...styles.disabledDashboardCard }} aria-disabled="true">
+              <span style={{ ...styles.cardTitle, ...styles.disabledCardTitle }}>Spell Book</span>
+              <span style={styles.cardText}>{SPELLBOOK_UNAVAILABLE_MESSAGE}</span>
+            </div>
+          )}
           <Link href="/dashboard/random-spell-generator" legacyBehavior>
             <a style={styles.dashboardCard}>
               <span style={styles.cardTitle}>Random Spell Generator</span>
@@ -79,6 +99,12 @@ export default function DashboardPage() {
             <a style={styles.dashboardCard}>
               <span style={styles.cardTitle}>Equipment List</span>
               <span style={styles.cardText}>Browse weapons, armor, provisions, transport, animals, services, and adventuring gear.</span>
+            </a>
+          </Link>
+          <Link href="/dashboard/magical-items" legacyBehavior>
+            <a style={styles.dashboardCard}>
+              <span style={styles.cardTitle}>Magical Items</span>
+              <span style={styles.cardText}>Browse magical item categories and generate random loot for your character.</span>
             </a>
           </Link>
         </section>
@@ -147,5 +173,13 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 13,
     fontWeight: 800,
     padding: '6px 10px',
+  },
+  disabledDashboardCard: {
+    cursor: 'not-allowed',
+    opacity: 0.58,
+    pointerEvents: 'none',
+  },
+  disabledCardTitle: {
+    color: '#94A3B8',
   },
 };

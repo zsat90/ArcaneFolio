@@ -1,14 +1,36 @@
 import { useEffect, useState } from 'react';
 import { Character } from '../../types/characterTypes';
-import { calculateSheetMagicPoints, getCharacterSheet } from './characterSheetState';
+import { ensureAuthTokenReady, getFirebaseAuth } from '../auth/authService';
+import { getScopedStorageKey } from '../auth/accountScope';
+import {
+  clearCachedCharacterData,
+  clearCharacterDataCache,
+  getCachedRuntimeState,
+  getCachedSpellbookIds,
+  persistRuntimeState,
+  persistSheet,
+  persistSpellbook,
+  preloadCharacterData,
+  setCachedRuntimeState,
+  setCachedSpellbook,
+} from '../firestore/characterDataCache';
+import {
+  characterRecordToCharacter,
+  deleteCharacterDocument,
+  loadCharacterDocuments,
+  saveCharacterDocument,
+} from '../firestore/characterRepository';
+import { logFirestoreDiagnostics } from '../firestore/firestoreDiagnostics';
+import { deleteRuntimeStateDocument, saveRuntimeStateDocument, toRuntimeStateRecord } from '../firestore/runtimeStateRepository';
+import { deleteSheetDocument } from '../firestore/sheetRepository';
+import { deleteSpellbookDocument, saveSpellbookDocument } from '../firestore/spellbookRepository';
+import {
+  calculateSheetMagicPoints,
+  getCharacterSheet,
+} from './characterSheetState';
 import { parseHitPointValue } from './hitPoints';
 
-const SELECTED_CHARACTER_KEY = 'arcane:selected-character';
-const CUSTOM_CHARACTERS_KEY = 'arcane:custom-characters';
-const REMOVED_CHARACTERS_KEY = 'arcane:removed-characters';
-const CHARACTER_STATE_KEY = 'arcane:character-state';
-const SPELLBOOK_KEY = 'arcane:spellbooks';
-const CHARACTER_SHEETS_KEY = 'arcane:character-sheets';
+const SELECTED_CHARACTER_KEY = 'arcane:selected-character-id';
 const CHANGE_EVENT = 'arcane-character-change';
 const SPELLBOOK_EVENT = 'arcane-spellbook-change';
 
@@ -18,40 +40,36 @@ type CharacterResources = {
   hitPoints: number;
   maxHitPoints: number;
 };
-type CharacterResourceState = Record<string, Partial<CharacterResources>>;
-type SpellbookState = Record<string, number[]>;
 
-export const DEFAULT_CHARACTERS: Character[] = [
-  { id: 1, name: 'Gandalf', class: 'Wizard', characterClass: 'Wizard', level: 3, magicPoints: 12, maxMagicPoints: 12, hitPoints: 0, maxHitPoints: 0 },
-  { id: 2, name: 'Frodo', class: 'Rogue', characterClass: 'Rogue', level: 1, magicPoints: 4, maxMagicPoints: 4, hitPoints: 0, maxHitPoints: 0 },
-  { id: 3, name: 'Aragorn', class: 'Fighter', characterClass: 'Fighter', level: 2, magicPoints: 6, maxMagicPoints: 6, hitPoints: 0, maxHitPoints: 0 },
-];
+export const DEFAULT_CHARACTERS: Character[] = [];
 
 const canUseStorage = () => typeof window !== 'undefined';
 
-const readJson = <T,>(key: string, fallback: T): T => {
+const readSelectedCharacterId = () => {
   if (!canUseStorage()) {
-    return fallback;
+    return null;
   }
 
-  try {
-    const value = window.localStorage.getItem(key);
-    return value ? JSON.parse(value) as T : fallback;
-  } catch {
-    return fallback;
+  const value = window.localStorage.getItem(getScopedStorageKey(SELECTED_CHARACTER_KEY));
+  if (!value) {
+    return null;
   }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 };
 
-const writeJson = (key: string, value: unknown) => {
-  if (canUseStorage()) {
-    window.localStorage.setItem(key, JSON.stringify(value));
+const writeSelectedCharacterId = (characterId: number | null) => {
+  if (!canUseStorage()) {
+    return;
   }
-};
 
-const removeValue = (key: string) => {
-  if (canUseStorage()) {
-    window.localStorage.removeItem(key);
+  if (characterId === null) {
+    window.localStorage.removeItem(getScopedStorageKey(SELECTED_CHARACTER_KEY));
+    return;
   }
+
+  window.localStorage.setItem(getScopedStorageKey(SELECTED_CHARACTER_KEY), String(characterId));
 };
 
 const emitCharacterChange = () => {
@@ -99,10 +117,7 @@ const getSheetHitPointValues = (characterId: number, fallback?: Character) => {
   const maxHitPoints = Math.max(0, totalHitPoints ?? fullHitPoints ?? fallback?.maxHitPoints ?? fallback?.hitPoints ?? currentHitPoints ?? 0);
   const hitPoints = Math.min(Math.max(0, totalHitPoints ?? currentHitPoints ?? fallback?.hitPoints ?? maxHitPoints), maxHitPoints);
 
-  return {
-    hitPoints,
-    maxHitPoints,
-  };
+  return { hitPoints, maxHitPoints };
 };
 
 const getResourceDefaults = (character: Character): CharacterResources => {
@@ -127,114 +142,207 @@ const mergeResources = (character: Character, resources?: Partial<CharacterResou
   };
 };
 
+const getCurrentOwnerId = () => getFirebaseAuth().currentUser?.uid || null;
+
+const getErrorCode = (error: unknown) => (
+  typeof error === 'object' && error && 'code' in error
+    ? String(error.code)
+    : 'unknown'
+);
+
+const getErrorMessage = (error: unknown) => (
+  typeof error === 'object' && error && 'message' in error
+    ? String(error.message)
+    : 'Unknown error'
+);
+
+const updateRuntimeState = async (character: Character, resources: CharacterResources) => {
+  const record = toRuntimeStateRecord({
+    currentHp: resources.hitPoints,
+    maxHp: resources.maxHitPoints,
+    currentMp: resources.magicPoints,
+    maxMp: resources.maxMagicPoints,
+  });
+  setCachedRuntimeState(character.id, record);
+  await persistRuntimeState(character.id, {
+    currentHp: resources.hitPoints,
+    maxHp: resources.maxHitPoints,
+    currentMp: resources.magicPoints,
+    maxMp: resources.maxMagicPoints,
+  });
+};
+
+export const clearSessionCharacterState = () => {
+  writeSelectedCharacterId(null);
+  clearCharacterDataCache();
+  emitCharacterChange();
+  emitSpellbookChange();
+};
+
 export const setSelectedCharacter = (character: Character) => {
   const normalizedCharacter = normalizeCharacter(character);
-  const state = readJson<CharacterResourceState>(CHARACTER_STATE_KEY, {});
-  const key = String(normalizedCharacter.id);
+  writeSelectedCharacterId(normalizedCharacter.id);
+  selectedCharacterCache = normalizedCharacter;
 
-  if (!state[key]) {
-    state[key] = getResourceDefaults(normalizedCharacter);
-    writeJson(CHARACTER_STATE_KEY, state);
+  void preloadCharacterData(normalizedCharacter.id).then(async () => {
+    let runtime = getCachedRuntimeState(normalizedCharacter.id);
+
+    if (!runtime) {
+      const defaults = getResourceDefaults(normalizedCharacter);
+      await updateRuntimeState(normalizedCharacter, defaults);
+    }
+
+    selectedCharacterCache = mergeCharacterWithRuntime(normalizedCharacter);
+    emitCharacterChange();
+  });
+};
+
+export const getCharacters = async () => {
+  const ownerId = getCurrentOwnerId();
+
+  if (!ownerId) {
+    return [] as Character[];
   }
 
-  writeJson(SELECTED_CHARACTER_KEY, normalizedCharacter);
-  emitCharacterChange();
+  const records = await loadCharacterDocuments();
+  const characters = records.map((record) => normalizeCharacter(characterRecordToCharacter(record)));
+  const selectedCharacterId = readSelectedCharacterId();
+
+  if (selectedCharacterId && !characters.some((character) => character.id === selectedCharacterId)) {
+    writeSelectedCharacterId(null);
+  }
+
+  return characters;
 };
 
-export const getCharacters = () => {
-  const customCharacters = readJson<Character[]>(CUSTOM_CHARACTERS_KEY, []);
-  const removedCharacterIds = new Set(readJson<number[]>(REMOVED_CHARACTERS_KEY, []));
-  const charactersById = new Map<number, Character>();
+export const addCharacter = async (
+  character: Omit<Character, 'id'> & { id?: number },
+  sheet?: import('./characterSheetState').CharacterSheetState,
+) => {
+  const ownerId = await ensureAuthTokenReady();
 
-  DEFAULT_CHARACTERS.concat(customCharacters).forEach((character) => {
-    const normalizedCharacter = normalizeCharacter(character);
+  if (!ownerId) {
+    throw new Error('You must be logged in to create a character.');
+  }
 
-    if (!removedCharacterIds.has(normalizedCharacter.id)) {
-      charactersById.set(normalizedCharacter.id, normalizedCharacter);
-    }
+  logFirestoreDiagnostics('add-character-start', {
+    characterName: character.name,
   });
 
-  return Array.from(charactersById.values());
-};
-
-export const addCharacter = (character: Omit<Character, 'id'> & { id?: number }) => {
   const normalizedCharacter = normalizeCharacter({
     ...character,
     id: character.id ?? Date.now(),
   });
-  const customCharacters = readJson<Character[]>(CUSTOM_CHARACTERS_KEY, []);
-  const existingIndex = customCharacters.findIndex((item) => item.id === normalizedCharacter.id);
 
-  if (existingIndex >= 0) {
-    customCharacters[existingIndex] = normalizedCharacter;
-  } else {
-    customCharacters.push(normalizedCharacter);
+  await saveCharacterDocument(normalizedCharacter, sheet);
+  await saveSpellbookDocument(normalizedCharacter.id, []);
+  await saveRuntimeStateDocument(
+    normalizedCharacter.id,
+    toRuntimeStateRecord({
+      currentHp: normalizedCharacter.hitPoints ?? 0,
+      maxHp: normalizedCharacter.maxHitPoints ?? 0,
+      currentMp: normalizedCharacter.magicPoints ?? 0,
+      maxMp: normalizedCharacter.maxMagicPoints ?? 0,
+    }),
+  );
+
+  if (sheet) {
+    await persistSheet(normalizedCharacter.id, sheet);
   }
 
-  writeJson(CUSTOM_CHARACTERS_KEY, customCharacters);
+  setCachedSpellbook(normalizedCharacter.id, []);
+  setCachedRuntimeState(
+    normalizedCharacter.id,
+    toRuntimeStateRecord({
+      currentHp: normalizedCharacter.hitPoints ?? 0,
+      maxHp: normalizedCharacter.maxHitPoints ?? 0,
+      currentMp: normalizedCharacter.magicPoints ?? 0,
+      maxMp: normalizedCharacter.maxMagicPoints ?? 0,
+    }),
+  );
+
   setSelectedCharacter(normalizedCharacter);
-  emitCharacterChange();
   return normalizedCharacter;
 };
 
-export const removeCharacter = (characterId: number) => {
-  const key = String(characterId);
-  const customCharacters = readJson<Character[]>(CUSTOM_CHARACTERS_KEY, []);
-  const removedCharacterIds = new Set(readJson<number[]>(REMOVED_CHARACTERS_KEY, []));
-  const isDefaultCharacter = DEFAULT_CHARACTERS.some((character) => character.id === characterId);
+export const removeCharacter = async (characterId: number) => {
+  const ownerId = await ensureAuthTokenReady();
 
-  writeJson(
-    CUSTOM_CHARACTERS_KEY,
-    customCharacters.filter((character) => character.id !== characterId),
-  );
-
-  if (isDefaultCharacter) {
-    removedCharacterIds.add(characterId);
-    writeJson(REMOVED_CHARACTERS_KEY, Array.from(removedCharacterIds));
+  if (!ownerId) {
+    return;
   }
 
-  const resourceState = readJson<CharacterResourceState>(CHARACTER_STATE_KEY, {});
-  delete resourceState[key];
-  writeJson(CHARACTER_STATE_KEY, resourceState);
+  try {
+    await Promise.all([
+      deleteCharacterDocument(characterId),
+      deleteSheetDocument(characterId),
+      deleteSpellbookDocument(characterId),
+      deleteRuntimeStateDocument(characterId),
+    ]);
+  } catch (error) {
+    console.error(
+      `[characters] delete failed code=${getErrorCode(error)} message=${getErrorMessage(error)}`,
+      error,
+    );
+    throw error;
+  }
 
-  const spellbookState = readJson<SpellbookState>(SPELLBOOK_KEY, {});
-  delete spellbookState[key];
-  writeJson(SPELLBOOK_KEY, spellbookState);
+  clearCachedCharacterData(characterId);
 
-  const sheetState = readJson<Record<string, unknown>>(CHARACTER_SHEETS_KEY, {});
-  delete sheetState[key];
-  writeJson(CHARACTER_SHEETS_KEY, sheetState);
-
-  const selectedCharacter = readJson<Character | null>(SELECTED_CHARACTER_KEY, null);
-
-  if (selectedCharacter?.id === characterId) {
-    removeValue(SELECTED_CHARACTER_KEY);
+  if (readSelectedCharacterId() === characterId) {
+    writeSelectedCharacterId(null);
   }
 
   emitCharacterChange();
   emitSpellbookChange();
 };
 
-export const getSelectedCharacter = (): Character | null => {
-  const character = readJson<Character | null>(SELECTED_CHARACTER_KEY, null);
+let selectedCharacterCache: Character | null = null;
 
-  if (!character) {
+export const getSelectedCharacter = (): Character | null => selectedCharacterCache;
+
+export const getSelectedCharacterSnapshot = () => selectedCharacterCache;
+
+export const hydrateSelectedCharacter = async (characters: Character[]) => {
+  const selectedCharacterId = readSelectedCharacterId();
+
+  if (!selectedCharacterId) {
+    selectedCharacterCache = null;
     return null;
   }
 
+  const character = characters.find((item) => item.id === selectedCharacterId);
+
+  if (!character) {
+    writeSelectedCharacterId(null);
+    selectedCharacterCache = null;
+    return null;
+  }
+
+  await preloadCharacterData(character.id);
+  selectedCharacterCache = mergeCharacterWithRuntime(character);
+  emitCharacterChange();
+  return selectedCharacterCache;
+};
+
+const mergeCharacterWithRuntime = (character: Character): Character => {
   const normalizedCharacter = normalizeCharacter(character);
-  const resources = readJson<CharacterResourceState>(CHARACTER_STATE_KEY, {})[String(normalizedCharacter.id)];
+  const runtime = getCachedRuntimeState(normalizedCharacter.id);
   const sheet = getCharacterSheet(normalizedCharacter.id);
   const sheetMagicPoints = calculateSheetMagicPoints(
     normalizedCharacter.characterClass || normalizedCharacter.class || '',
     normalizedCharacter.level || 1,
     sheet,
   );
-  const maxMagicPoints = sheetMagicPoints;
-  const magicPoints = Math.min(resources?.magicPoints ?? maxMagicPoints, maxMagicPoints);
-  const sheetHitPointValues = getSheetHitPointValues(normalizedCharacter.id, normalizedCharacter);
-  const maxHitPoints = sheetHitPointValues.maxHitPoints;
-  const hitPoints = Math.min(resources?.hitPoints ?? sheetHitPointValues.hitPoints, maxHitPoints);
+
+  if (!runtime) {
+    return normalizedCharacter;
+  }
+
+  const maxMagicPoints = runtime.maxMp || sheetMagicPoints;
+  const magicPoints = Math.min(runtime.currentMp, maxMagicPoints);
+  const maxHitPoints = runtime.maxHp || normalizedCharacter.maxHitPoints || 0;
+  const hitPoints = Math.min(runtime.currentHp, maxHitPoints);
 
   return {
     ...normalizedCharacter,
@@ -245,70 +353,86 @@ export const getSelectedCharacter = (): Character | null => {
   };
 };
 
-export const syncMagicPointsFromSheet = (characterId: number, characterClass: string, level: number) => {
+export const syncMagicPointsFromSheet = async (characterId: number, characterClass: string, level: number) => {
   const sheet = getCharacterSheet(characterId);
   const maxMagicPoints = calculateSheetMagicPoints(characterClass, level, sheet);
   const hitPointValues = getSheetHitPointValues(characterId);
-  const state = readJson<CharacterResourceState>(CHARACTER_STATE_KEY, {});
-  const current = state[String(characterId)] ?? {};
+  const runtime = getCachedRuntimeState(characterId);
+  const current = runtime
+    ? {
+        magicPoints: runtime.currentMp,
+        maxMagicPoints: runtime.maxMp,
+        hitPoints: runtime.currentHp,
+        maxHitPoints: runtime.maxHp,
+      }
+    : hitPointValues;
 
-  state[String(characterId)] = {
-    ...current,
+  const next = {
     magicPoints: maxMagicPoints,
     maxMagicPoints,
-    hitPoints: hitPointValues.hitPoints,
-    maxHitPoints: hitPointValues.maxHitPoints,
+    hitPoints: current.hitPoints,
+    maxHitPoints: current.maxHitPoints,
   };
 
-  writeJson(CHARACTER_STATE_KEY, state);
+  await updateRuntimeState({ id: characterId, name: '', class: characterClass }, next);
   emitCharacterChange();
 };
 
-export const addMagicPoints = (amount: number) => {
-  const character = getSelectedCharacter();
-
-  if (!character || Number.isNaN(amount) || amount <= 0) {
-    return getSelectedCharacter();
-  }
-
-  const state = readJson<CharacterResourceState>(CHARACTER_STATE_KEY, {});
-  const key = String(character.id);
-  const current = mergeResources(character, state[key]);
-
-  state[key] = {
-    ...current,
-    magicPoints: Math.min(current.maxMagicPoints, current.magicPoints + amount),
-  };
-
-  writeJson(CHARACTER_STATE_KEY, state);
-  emitCharacterChange();
-  return getSelectedCharacter();
-};
-
-export const resetMagicPoints = () => {
-  const character = getSelectedCharacter();
+const withSelectedCharacterUpdate = async (
+  updater: (character: Character, current: CharacterResources) => CharacterResources,
+) => {
+  const character = getSelectedCharacterSnapshot();
 
   if (!character) {
     return null;
   }
 
-  const state = readJson<CharacterResourceState>(CHARACTER_STATE_KEY, {});
-  const key = String(character.id);
-  const current = mergeResources(character, state[key]);
+  const runtime = getCachedRuntimeState(character.id);
+  const current = mergeResources(character, runtime ? {
+    magicPoints: runtime.currentMp,
+    maxMagicPoints: runtime.maxMp,
+    hitPoints: runtime.currentHp,
+    maxHitPoints: runtime.maxHp,
+  } : undefined);
+  const next = updater(character, current);
 
-  state[key] = {
+  await updateRuntimeState(character, next);
+  selectedCharacterCache = mergeCharacterWithRuntime(character);
+  emitCharacterChange();
+  return selectedCharacterCache;
+};
+
+export const addMagicPoints = (amount: number) => {
+  if (Number.isNaN(amount) || amount <= 0) {
+    return getSelectedCharacterSnapshot();
+  }
+
+  void withSelectedCharacterUpdate((character, current) => ({
+    ...current,
+    magicPoints: Math.min(current.maxMagicPoints, current.magicPoints + amount),
+  }));
+
+  return getSelectedCharacterSnapshot();
+};
+
+export const resetMagicPoints = () => {
+  const character = getSelectedCharacterSnapshot();
+
+  if (!character) {
+    return null;
+  }
+
+  void withSelectedCharacterUpdate((_character, current) => ({
     ...current,
     magicPoints: character.maxMagicPoints ?? character.magicPoints ?? 0,
     maxMagicPoints: character.maxMagicPoints ?? character.magicPoints ?? 0,
-  };
+  }));
 
-  writeJson(CHARACTER_STATE_KEY, state);
-  emitCharacterChange();
-  return getSelectedCharacter();
+  return getSelectedCharacterSnapshot();
 };
 
 export const spendMagicPoints = (amount: number) => {
-  const character = getSelectedCharacter();
+  const character = getSelectedCharacterSnapshot();
 
   if (!character || Number.isNaN(amount) || amount <= 0) {
     return false;
@@ -320,125 +444,102 @@ export const spendMagicPoints = (amount: number) => {
     return false;
   }
 
-  const state = readJson<CharacterResourceState>(CHARACTER_STATE_KEY, {});
-  const key = String(character.id);
-  const current = mergeResources(character, state[key]);
-
-  state[key] = {
+  void withSelectedCharacterUpdate((_character, current) => ({
     ...current,
     magicPoints: currentMagicPoints - amount,
     maxMagicPoints: character.maxMagicPoints ?? currentMagicPoints,
-  };
+  }));
 
-  writeJson(CHARACTER_STATE_KEY, state);
-  emitCharacterChange();
   return true;
 };
 
 export const damageSelectedCharacter = (amount: number) => {
-  const character = getSelectedCharacter();
-
-  if (!character || Number.isNaN(amount) || amount <= 0) {
-    return getSelectedCharacter();
+  if (Number.isNaN(amount) || amount <= 0) {
+    return getSelectedCharacterSnapshot();
   }
 
-  const state = readJson<CharacterResourceState>(CHARACTER_STATE_KEY, {});
-  const key = String(character.id);
-  const current = mergeResources(character, state[key]);
-
-  state[key] = {
+  void withSelectedCharacterUpdate((_character, current) => ({
     ...current,
     hitPoints: Math.max(0, current.hitPoints - amount),
-  };
+  }));
 
-  writeJson(CHARACTER_STATE_KEY, state);
-  emitCharacterChange();
-  return getSelectedCharacter();
+  return getSelectedCharacterSnapshot();
 };
 
 export const healSelectedCharacter = (amount: number) => {
-  const character = getSelectedCharacter();
-
-  if (!character || Number.isNaN(amount) || amount <= 0) {
-    return getSelectedCharacter();
+  if (Number.isNaN(amount) || amount <= 0) {
+    return getSelectedCharacterSnapshot();
   }
 
-  const state = readJson<CharacterResourceState>(CHARACTER_STATE_KEY, {});
-  const key = String(character.id);
-  const current = mergeResources(character, state[key]);
-
-  state[key] = {
+  void withSelectedCharacterUpdate((_character, current) => ({
     ...current,
     hitPoints: Math.min(current.maxHitPoints, current.hitPoints + amount),
-  };
+  }));
 
-  writeJson(CHARACTER_STATE_KEY, state);
-  emitCharacterChange();
-  return getSelectedCharacter();
+  return getSelectedCharacterSnapshot();
 };
 
 export const restSelectedCharacter = () => {
-  const character = getSelectedCharacter();
+  const character = getSelectedCharacterSnapshot();
 
   if (!character) {
     return null;
   }
 
-  const state = readJson<CharacterResourceState>(CHARACTER_STATE_KEY, {});
-  const key = String(character.id);
-  const current = mergeResources(character, state[key]);
   const levelHealing = Math.max(0, character.level ?? 0);
 
-  state[key] = {
+  void withSelectedCharacterUpdate((_character, current) => ({
     ...current,
     magicPoints: character.maxMagicPoints ?? character.magicPoints ?? 0,
     maxMagicPoints: character.maxMagicPoints ?? character.magicPoints ?? 0,
     hitPoints: Math.min(current.maxHitPoints, current.hitPoints + levelHealing),
-  };
+  }));
 
-  writeJson(CHARACTER_STATE_KEY, state);
-  emitCharacterChange();
-  return getSelectedCharacter();
+  return getSelectedCharacterSnapshot();
 };
 
 export const getSpellbookIds = (characterId?: number) => {
-  const character = characterId ? null : getSelectedCharacter();
-  const key = String(characterId ?? character?.id ?? '');
-  const state = readJson<SpellbookState>(SPELLBOOK_KEY, {});
+  const id = characterId ?? readSelectedCharacterId();
 
-  return key ? state[key] ?? [] : [];
+  if (!id) {
+    return [];
+  }
+
+  return getCachedSpellbookIds(id) ?? [];
 };
 
 export const addSpellToSelectedSpellbook = (spellId: number) => {
-  const character = getSelectedCharacter();
+  const characterId = readSelectedCharacterId();
 
-  if (!character) {
+  if (!characterId) {
     return false;
   }
 
-  const state = readJson<SpellbookState>(SPELLBOOK_KEY, {});
-  const key = String(character.id);
-  const spellIds = new Set(state[key] ?? []);
+  const spellIds = new Set(getCachedSpellbookIds(characterId) ?? []);
   spellIds.add(spellId);
-  state[key] = Array.from(spellIds);
+  const nextIds = Array.from(spellIds);
 
-  writeJson(SPELLBOOK_KEY, state);
+  setCachedSpellbook(characterId, nextIds);
+  void persistSpellbook(characterId, nextIds).catch((error) => {
+    console.error('[spellbook] Failed to persist spellbook', error);
+  });
   emitSpellbookChange();
   return true;
 };
 
 export const removeSpellFromSelectedSpellbook = (spellId: number) => {
-  const character = getSelectedCharacter();
+  const characterId = readSelectedCharacterId();
 
-  if (!character) {
+  if (!characterId) {
     return false;
   }
 
-  const state = readJson<SpellbookState>(SPELLBOOK_KEY, {});
-  const key = String(character.id);
-  state[key] = (state[key] ?? []).filter((id) => id !== spellId);
+  const nextIds = (getCachedSpellbookIds(characterId) ?? []).filter((id) => id !== spellId);
 
-  writeJson(SPELLBOOK_KEY, state);
+  setCachedSpellbook(characterId, nextIds);
+  void persistSpellbook(characterId, nextIds).catch((error) => {
+    console.error('[spellbook] Failed to persist spellbook', error);
+  });
   emitSpellbookChange();
   return true;
 };
@@ -447,7 +548,19 @@ export const useSelectedCharacter = () => {
   const [character, setCharacter] = useState<Character | null>(null);
 
   useEffect(() => {
-    const syncCharacter = () => setCharacter(getSelectedCharacter());
+    const syncCharacter = async () => {
+      const selectedId = readSelectedCharacterId();
+
+      if (!selectedId) {
+        setCharacter(null);
+        return;
+      }
+
+      await preloadCharacterData(selectedId);
+      const characters = await getCharacters().catch(() => []);
+      const match = characters.find((item) => item.id === selectedId);
+      setCharacter(match ? mergeCharacterWithRuntime(match) : null);
+    };
 
     syncCharacter();
     window.addEventListener(CHANGE_EVENT, syncCharacter);
@@ -466,7 +579,17 @@ export const useSpellbookIds = () => {
   const [spellIds, setSpellIds] = useState<number[]>([]);
 
   useEffect(() => {
-    const syncSpellbook = () => setSpellIds(getSpellbookIds());
+    const syncSpellbook = async () => {
+      const selectedId = readSelectedCharacterId();
+
+      if (!selectedId) {
+        setSpellIds([]);
+        return;
+      }
+
+      await preloadCharacterData(selectedId);
+      setSpellIds(getCachedSpellbookIds(selectedId) ?? []);
+    };
 
     syncSpellbook();
     window.addEventListener(SPELLBOOK_EVENT, syncSpellbook);

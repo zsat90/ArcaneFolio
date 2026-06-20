@@ -1,13 +1,16 @@
-import React, { ChangeEvent, FormEvent, useState } from 'react';
+import React, { ChangeEvent, FormEvent, useEffect, useState } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
 import { useRouter } from 'next/router';
 import EquipmentListModal from '../../components/Equipment/EquipmentListModal';
 import ImageBackgroundWrapper from '../../components/imageBackground';
 import Buttons from '../../components/Login/Button';
+import { getFirebaseAuth, ensureAuthTokenReady } from '../../utils/auth/authService';
 import { addCharacter, syncMagicPointsFromSheet } from '../../utils/character/characterState';
 import {
   calculateSheetMagicPoints,
   CharacterSheetState,
   createEmptySheet,
+  DEFAULT_BASE_THACO,
   NonWeaponProficiencyRow,
   ProficiencyRow,
   SavingThrowRow,
@@ -22,10 +25,60 @@ import {
   getLevelTitleForClass,
 } from '../../utils/character/experience';
 import { COIN_FIELDS, deductEquipmentCost } from '../../utils/character/coins';
+import EquipmentItemRow from '../../components/CharacterSheet/EquipmentItemRow';
+import RaceSelectOptions from '../../components/CharacterSheet/RaceSelectOptions';
 import { getEquipmentLinesForCategory, withSelectedEquipmentOption } from '../../utils/character/equipment';
+import { removeLineFromBucket, syncSheetAfterEquipmentRemoval } from '../../utils/character/equipmentRemoval';
 import { withCalculatedRealArmorClass } from '../../utils/character/armorClass';
-import { parseHitPointValue, withCalculatedTotalHitPoints } from '../../utils/character/hitPoints';
+import { parseHitPointValue, withLevelAwareTotalHitPoints } from '../../utils/character/hitPoints';
 import { applySecondarySkillToSheet, SECONDARY_SKILLS } from '../../utils/character/secondarySkills';
+import {
+  applyDexterityAdjustmentsToSheet,
+  getDexteritySavingThrowBonus,
+  parseAbilityScore,
+} from '../../utils/character/abilityScores';
+import { getClassSpecialAbilitiesText, getClassXpBonusFieldValue, getRaceSelectionForClass, hasClassRules, hasClassXpBonusRule, isRaceAllowedForClass } from '../../utils/character/classRules';
+import {
+  WEAPON_CHART_CENTERED_FIELDS,
+  WEAPON_DERIVED_READONLY_FIELDS,
+  applyWeaponSelectionToRow,
+  enrichAllWeaponRows,
+  getSoulSwordGlowColor,
+  getWeaponThacoChartTarget,
+  getWeaponEquipmentLines,
+  getWeaponFieldDisplayValue,
+  getWeaponRowContext,
+  isSoulSwordLine,
+  SOUL_SWORD_COLORS,
+  updateWeaponRowField,
+} from '../../utils/character/weapons';
+import {
+  getWeaponDisplayLabel,
+  getWeaponProficiencySlotOptions,
+} from '../../utils/character/weaponProficiencies';
+import {
+  createSavingThrowHandlers,
+  SAVING_THROW_CHECK_FIELDS,
+} from '../../utils/character/savingThrows';
+
+const WEAPON_FIELDS: Array<keyof WeaponRow> = [
+  'weapon',
+  'wac',
+  'thacoWeaponBonus',
+  'thacoStrengthBonus',
+  'thacoSpecialization',
+  'thacoReal',
+  'speedBase',
+  'speedReactionAdj',
+  'speedWeaponBonus',
+  'speedReal',
+  'damageSmallMedium',
+  'damageLarge',
+  'damageWeaponBonus',
+  'damageStrengthBonus',
+  'damageSpecialization',
+  'damageReal',
+];
 
 const CHARACTER_CLASSES = [
   'Wizard',
@@ -46,8 +99,17 @@ const CHARACTER_CLASSES = [
   'Vanar Knight',
 ];
 const SHEET_PAGES = ['Page 1', 'Page 2', 'Page 3', 'Page 4', 'Page 5'];
-const RACE_OPTIONS = ['Human', 'Dwarf', 'Elf', 'Half-elf', 'Gnome', 'Halfling'];
-const SOCIAL_CLASS_OPTIONS = ['Lower-lower', 'Lower-middle', 'Middle-middle', 'Upper'];
+const SOCIAL_CLASS_OPTIONS = [
+  'Lower Lower Class',
+  'Middle Lower Class',
+  'Upper Lower Class',
+  'Lower Middle Class',
+  'Middle Middle Class',
+  'Upper Middle Class',
+  'Lower Upper Class',
+  'Middle Upper Class',
+  'Upper Upper Class',
+];
 const THACO_ARMOR_CLASSES = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, -1, -2, -3, -4, -5, -6, -7, -8, -9, -10];
 const RACIAL_ADJUSTMENTS: Record<string, string> = {
   Human: 'No racial ability adjustment.',
@@ -113,28 +175,7 @@ const parseLevelTitle = (levelTitle: string) => {
   return match ? Number(match[0]) : 1;
 };
 
-const getThacoTarget = (realThaco: string, armorClass: number) => {
-  const thaco = Number(realThaco);
-
-  if (!Number.isFinite(thaco)) {
-    return '';
-  }
-
-  return String(thaco - armorClass);
-};
-
 const signed = (value: number) => value > 0 ? `+${value}` : String(value);
-
-const parseAbilityScore = (score: string) => {
-  const trimmedScore = score.trim();
-
-  if (!trimmedScore) {
-    return null;
-  }
-
-  const value = Number(trimmedScore);
-  return Number.isFinite(value) ? value : null;
-};
 
 const parseExceptionalStrength = (score: string) => {
   const value = score.trim().toLowerCase();
@@ -180,32 +221,6 @@ const getStrengthAutofill = (score: string) => {
   if (value === 23) return { hit: '+5', dmg: '+11', wgt: '935', press: '1,130', doors: '18(16)', bars: '90%' };
   if (value === 24) return { hit: '+6', dmg: '+12', wgt: '1,235', press: '1,440', doors: '19(17)', bars: '95%' };
   return { hit: '+7', dmg: '+14', wgt: '1,535', press: '1,750', doors: '19(18)', bars: '99%' };
-};
-
-const getDexterityAutofill = (score: string) => {
-  const value = parseAbilityScore(score);
-  if (value === null) return null;
-  const rows: Record<number, { reaction: string; missile: string; defense: string }> = {
-    1: { reaction: '-6', missile: '-6', defense: '+5' },
-    2: { reaction: '-4', missile: '-4', defense: '+5' },
-    3: { reaction: '-3', missile: '-3', defense: '+4' },
-    4: { reaction: '-2', missile: '-2', defense: '+3' },
-    5: { reaction: '-1', missile: '-1', defense: '+2' },
-    6: { reaction: '0', missile: '0', defense: '+1' },
-    15: { reaction: '0', missile: '0', defense: '-1' },
-    16: { reaction: '+1', missile: '+1', defense: '-2' },
-    17: { reaction: '+2', missile: '+2', defense: '-3' },
-    18: { reaction: '+2', missile: '+2', defense: '-4' },
-    19: { reaction: '+3', missile: '+3', defense: '-4' },
-    20: { reaction: '+3', missile: '+3', defense: '-4' },
-    21: { reaction: '+4', missile: '+4', defense: '-5' },
-    22: { reaction: '+4', missile: '+4', defense: '-5' },
-    23: { reaction: '+4', missile: '+4', defense: '-5' },
-    24: { reaction: '+5', missile: '+5', defense: '-6' },
-    25: { reaction: '+5', missile: '+5', defense: '-6' },
-  };
-  const row = rows[value] ?? { reaction: '0', missile: '0', defense: '0' };
-  return { ...row, parry: String(Math.ceil(Math.max(value, 1) / 2)) };
 };
 
 const getConstitutionAutofill = (score: string) => {
@@ -272,11 +287,6 @@ const numericModifier = (value: string) => {
   return match ? Number(match[0]) : null;
 };
 
-const getDexterityArmorBase = (defensiveAdjustment: string) => {
-  const adjustment = numericModifier(defensiveAdjustment);
-  return adjustment === null ? '' : String(10 + adjustment);
-};
-
 const getClassHitPointAdjustment = (hpAdjustment: string, selectedClass: string) => {
   const parenthetical = hpAdjustment.match(/\(([+-]?\d+)\)/);
   const base = hpAdjustment.match(/^[+-]?\d+/);
@@ -296,14 +306,19 @@ const getClassThacoGroup = (selectedClass: string) => {
   return '';
 };
 
-const getBaseThaco = (selectedClass: string, levelValue: number) => {
+const getBaseThaco = (selectedClass: string, levelTitle: string) => {
+  if (!selectedClass.trim() || !levelTitle.trim()) {
+    return DEFAULT_BASE_THACO;
+  }
+
   const group = getClassThacoGroup(selectedClass);
   const table = THACO_BY_GROUP[group];
 
   if (!table) {
-    return '';
+    return DEFAULT_BASE_THACO;
   }
 
+  const levelValue = parseLevelTitle(levelTitle);
   const boundedLevel = Math.min(Math.max(levelValue, 1), 20);
   return String(table[boundedLevel - 1]);
 };
@@ -328,10 +343,10 @@ const getSpecialistAttackOptions = (levelValue: number) => {
   return ['Melee 3/2', 'Light X-bow 1/1', 'Heavy X-bow 1/2', 'Thrown Dagger 3/1', 'Thrown Dart 4/1', 'Other Missiles 3/2'];
 };
 
-const getCombatDefaults = (selectedClass: string, levelValue: number) => ({
+const getCombatDefaults = (selectedClass: string, levelTitle: string) => ({
   'Base class Att/Rnd': '1/1',
-  SP: getSpecialistAttacks(selectedClass, levelValue),
-  'Base THACO': getBaseThaco(selectedClass, levelValue),
+  SP: getSpecialistAttacks(selectedClass, parseLevelTitle(levelTitle)),
+  'Base THACO': getBaseThaco(selectedClass, levelTitle),
 });
 
 const formatExperience = (value: number) => value.toLocaleString('en-US');
@@ -344,6 +359,8 @@ const parseExperience = (value: string) => {
 const createWeaponRow = (index: number): WeaponRow => ({
   id: `weapon-${Date.now()}-${index}`,
   weapon: '',
+  soulSwordColor: '',
+  soulSwordIgnited: false,
   wac: '',
   thacoWeaponBonus: '',
   thacoStrengthBonus: '',
@@ -387,6 +404,15 @@ const TRACKING_MODIFIER_LABELS = [
   'Poor light (moon, starlight)',
   'Tracked party attempts to hide trail',
 ];
+const THIEVING_DEX_BONUS_CLASSES = ['Rogue', 'Bard'] as const;
+const classUsesThievingDexBonus = (selectedClass: string) => (
+  THIEVING_DEX_BONUS_CLASSES.includes(selectedClass as typeof THIEVING_DEX_BONUS_CLASSES[number])
+);
+
+
+const SOUL_SWORD_COLOR_OPTIONS = SOUL_SWORD_COLORS.map((color) => (
+  color.charAt(0).toUpperCase() + color.slice(1)
+));
 const TURNING_UNDEAD_LABELS: Array<[string, string]> = [
   ['Skeleton', 'Skeleton'],
   ['Zombie', 'Zombie'],
@@ -449,7 +475,6 @@ const SAVING_THROW_RULES = [
   'Charisma: reaction adjustment applies to Charm.',
   'Roll equal to or greater than Real. Once Saving Throw is made 4 times, the Real goes down by one.',
 ];
-const SAVING_THROW_CHECK_FIELDS: Array<keyof SavingThrowRow> = ['check1', 'check2', 'check3', 'check4'];
 const STARTING_EQUIPMENT = [
   '2 Pair Linen Undergarments',
   '10ft of Cord',
@@ -612,11 +637,18 @@ const calculateThievingRealPercent = (row: ThievingSkillRow, race: string) => {
   return `${Math.min(Math.max(total, 0), 95)}%`;
 };
 
-const recalculateThievingSkills = (rows: ThievingSkillRow[], race: string, dexterity: string) => (
+const recalculateThievingSkills = (
+  rows: ThievingSkillRow[],
+  race: string,
+  dexterity: string,
+  selectedClass: string,
+) => (
   rows.map((row) => {
     const withDex = {
       ...row,
-      dex: getDexterityThievingAdjustment(row.skill, dexterity),
+      dex: classUsesThievingDexBonus(selectedClass)
+        ? getDexterityThievingAdjustment(row.skill, dexterity)
+        : '',
     };
 
     return {
@@ -625,14 +657,6 @@ const recalculateThievingSkills = (rows: ThievingSkillRow[], race: string, dexte
     };
   })
 );
-
-const clampSavingReal = (value: number) => Math.max(2, value);
-const clampSavingD4 = (value: number) => Math.min(Math.max(1, value), 4);
-
-const parseSavingNumber = (value: string) => {
-  const parsed = Number(value.replace(/[^0-9-]/g, ''));
-  return Number.isFinite(parsed) ? parsed : null;
-};
 
 const getConstitutionRaceSaveBonus = (constitution: string) => {
   const value = parseAbilityScore(constitution);
@@ -651,7 +675,7 @@ const savingThrowIncludes = (name: string, terms: string[]) => {
   return terms.some((term) => normalizedName.includes(term));
 };
 
-const getSavingThrowBonus = (rowName: string, currentSheet: CharacterSheetState) => {
+const getSavingThrowBonus = (rowName: string, currentSheet: CharacterSheetState, selectedClass: string) => {
   const name = rowName.toLowerCase();
   let bonus = 0;
   const constitutionRaceBonus = getConstitutionRaceSaveBonus(currentSheet.abilityDetails.Constitution);
@@ -677,8 +701,10 @@ const getSavingThrowBonus = (rowName: string, currentSheet: CharacterSheetState)
   }
 
   if (savingThrowIncludes(name, ['attack spells', 'rods', 'staves', 'wands', 'breath'])) {
-    const dexterityDefense = numericModifier(currentSheet.abilityDetails['Dexterity Def Adj (AC)']) ?? 0;
-    bonus += Math.abs(Math.min(dexterityDefense, 0));
+    bonus += getDexteritySavingThrowBonus(
+      selectedClass,
+      currentSheet.abilityDetails['Dexterity Def Adj (AC)'],
+    );
   }
 
   if (savingThrowIncludes(name, ['mind spells', 'charm', 'fear', 'illusion', 'sleep'])) {
@@ -692,25 +718,10 @@ const getSavingThrowBonus = (rowName: string, currentSheet: CharacterSheetState)
   return Math.max(0, bonus);
 };
 
-const recalculateSavingThrowRows = (rows: SavingThrowRow[], currentSheet: CharacterSheetState) => (
-  rows.map((row) => {
-    const base = parseSavingNumber(row.base);
-
-    if (base === null) {
-      return row;
-    }
-
-    return {
-      ...row,
-      real: String(clampSavingReal(base - getSavingThrowBonus(row.name, currentSheet))),
-    };
-  })
-);
-
-const getSavingThrowReductionSummary = (currentSheet: CharacterSheetState) => {
+const getSavingThrowReductionSummary = (currentSheet: CharacterSheetState, selectedClass: string) => {
   const reductions = currentSheet.savingThrowRows
     .map((row) => {
-      const bonus = getSavingThrowBonus(row.name, currentSheet);
+      const bonus = getSavingThrowBonus(row.name, currentSheet, selectedClass);
       return bonus > 0 ? `${row.name}: reduce Real by ${bonus}` : '';
     })
     .filter(Boolean);
@@ -737,12 +748,61 @@ export default function AddCharacterPage() {
   const [maxMagicPoints, setMaxMagicPoints] = useState('10');
   const [sheet, setSheet] = useState<CharacterSheetState>(() => createEmptySheet());
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authReady, setAuthReady] = useState(false);
+  const [authUserUid, setAuthUserUid] = useState<string | null>(null);
   const [isEquipmentModalOpen, setIsEquipmentModalOpen] = useState(false);
   const classLevelOptions = getLevelOptionsForClass(characterClass);
   const maxClassLevel = classLevelOptions[classLevelOptions.length - 1] ?? 20;
+  const currentClassLevel = parseLevelTitle(sheet.levelTitle || level);
+  const weaponProficiencySlotOptions = getWeaponProficiencySlotOptions(characterClass);
+  const selectedSoulSwordIndex = sheet.weaponRows.findIndex((row) => isSoulSwordLine(row.weapon));
+  const selectedSoulSwordRow = selectedSoulSwordIndex >= 0 ? sheet.weaponRows[selectedSoulSwordIndex] : null;
   const armorTypeOptions = withSelectedEquipmentOption(getEquipmentLinesForCategory(sheet.equipmentDetails, 'Armor'), sheet.armorDetails['Armor Type']);
   const helmOptions = withSelectedEquipmentOption(getEquipmentLinesForCategory(sheet.equipmentDetails, 'Helms'), sheet.armorDetails.Helm);
   const shieldOptions = withSelectedEquipmentOption(getEquipmentLinesForCategory(sheet.equipmentDetails, 'Shields'), sheet.armorDetails.Shield);
+
+  useEffect(() => {
+    const auth = getFirebaseAuth();
+    console.log('[add-character] Firebase auth loading started');
+    const suspiciousAuthTimer = window.setTimeout(() => {
+      console.warn('[add-character] Auth still loading after 3000ms');
+    }, 3000);
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.log('[add-character] onAuthStateChanged fired', { uid: user?.uid ?? null });
+
+      void (async () => {
+        if (!user) {
+          setAuthUserUid(null);
+          setAuthLoading(false);
+          setAuthReady(true);
+          window.clearTimeout(suspiciousAuthTimer);
+          return;
+        }
+
+        try {
+          const uid = await ensureAuthTokenReady();
+          console.log('[add-character] auth token ready uid', uid);
+          setAuthUserUid(uid);
+          setAuthReady(Boolean(uid));
+        } catch (tokenError) {
+          console.error('[add-character] auth token failed', tokenError);
+          setAuthUserUid(null);
+          setAuthReady(false);
+        } finally {
+          setAuthLoading(false);
+          window.clearTimeout(suspiciousAuthTimer);
+        }
+      })();
+    });
+
+    return () => {
+      window.clearTimeout(suspiciousAuthTimer);
+      unsubscribe();
+    };
+  }, []);
 
   const updateSheetField = (field: keyof CharacterSheetState) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const value = event.target.value;
@@ -757,7 +817,7 @@ export default function AddCharacterPage() {
         [field]: levelTitle,
         combatDetails: {
           ...currentSheet.combatDetails,
-          ...getCombatDefaults(characterClass, parsedLevel),
+          ...getCombatDefaults(characterClass, levelTitle),
           MP: String(calculateSheetMagicPoints(characterClass, parsedLevel, currentSheet)),
         },
         experienceDetails: {
@@ -765,10 +825,13 @@ export default function AddCharacterPage() {
           ...getClassExperienceDefaults(characterClass, parsedLevel),
         },
         hitPointDetails: {
-          ...withCalculatedTotalHitPoints({
-            ...currentSheet.hitPointDetails,
-            'Per Level': getHitDieForClass(characterClass),
-          }),
+          ...withLevelAwareTotalHitPoints(
+            {
+              ...currentSheet.hitPointDetails,
+              'Per Level': getHitDieForClass(characterClass),
+            },
+            parsedLevel,
+          ),
         },
         proficiencyDetails: {
           ...currentSheet.proficiencyDetails,
@@ -788,6 +851,9 @@ export default function AddCharacterPage() {
 
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     setName(event.target.value);
+    if (error) {
+      setError('');
+    }
   };
 
   const handleClassChange = (event: ChangeEvent<HTMLSelectElement>) => {
@@ -798,42 +864,74 @@ export default function AddCharacterPage() {
     setCharacterClass(selectedClass);
     setLevel(String(selectedLevel));
 
-    setSheet((currentSheet) => ({
-      ...currentSheet,
-      levelTitle: getLevelTitleForClass(selectedClass, parseLevelTitle(currentSheet.levelTitle)),
-      combatDetails: {
-        ...currentSheet.combatDetails,
-        ...getCombatDefaults(selectedClass, parseLevelTitle(currentSheet.levelTitle)),
-        MP: String(calculateSheetMagicPoints(selectedClass, parseLevelTitle(currentSheet.levelTitle), currentSheet)),
-      },
-      hitPointDetails: {
-        ...withCalculatedTotalHitPoints({
-          ...currentSheet.hitPointDetails,
-          'Per Level': getHitDieForClass(selectedClass),
-          Adjustment: getClassHitPointAdjustment(currentSheet.abilityDetails['Constitution HP Adj'], selectedClass),
-        }),
-      },
-      experienceDetails: {
-        ...currentSheet.experienceDetails,
-        ...getClassExperienceDefaults(selectedClass, parseLevelTitle(currentSheet.levelTitle)),
-      },
-      proficiencyDetails: {
-        ...currentSheet.proficiencyDetails,
-        'Thieving Skill Points': getThievingPointsToSpend(selectedClass, parseLevelTitle(currentSheet.levelTitle), currentSheet.thievingSkills),
-      },
-      turningUndead: getTurningUndeadDefaults(selectedClass, parseLevelTitle(currentSheet.levelTitle)),
-    }));
+    setSheet((currentSheet) => {
+      const nextRace = getRaceSelectionForClass(selectedClass, currentSheet.race);
+      const dexterityUpdates = currentSheet.abilityDetails.Dexterity.trim()
+        ? applyDexterityAdjustmentsToSheet(currentSheet, selectedClass)
+        : {};
+      const nextThievingSkills = recalculateThievingSkills(
+        currentSheet.thievingSkills,
+        nextRace,
+        currentSheet.abilityDetails.Dexterity,
+        selectedClass,
+      );
+
+      return {
+        ...currentSheet,
+        race: nextRace,
+        racialBonuses: nextRace
+          ? (RACIAL_ABILITIES[nextRace] ?? RACIAL_ADJUSTMENTS[nextRace] ?? '')
+          : '',
+        specialAbilities: hasClassRules(selectedClass)
+          ? getClassSpecialAbilitiesText(selectedClass)
+          : '',
+        levelTitle: getLevelTitleForClass(selectedClass, parseLevelTitle(currentSheet.levelTitle)),
+        combatDetails: {
+          ...currentSheet.combatDetails,
+          ...getCombatDefaults(selectedClass, currentSheet.levelTitle),
+          MP: String(calculateSheetMagicPoints(selectedClass, parseLevelTitle(currentSheet.levelTitle), currentSheet)),
+        },
+        hitPointDetails: {
+          ...withLevelAwareTotalHitPoints(
+            {
+              ...currentSheet.hitPointDetails,
+              'Per Level': getHitDieForClass(selectedClass),
+              Adjustment: getClassHitPointAdjustment(currentSheet.abilityDetails['Constitution HP Adj'], selectedClass),
+            },
+            parseLevelTitle(currentSheet.levelTitle),
+          ),
+        },
+        experienceDetails: {
+          ...currentSheet.experienceDetails,
+          ...getClassExperienceDefaults(selectedClass, parseLevelTitle(currentSheet.levelTitle)),
+          Bonus: hasClassXpBonusRule(selectedClass)
+            ? getClassXpBonusFieldValue(selectedClass, currentSheet.abilityDetails)
+            : '',
+        },
+        proficiencyDetails: {
+          ...currentSheet.proficiencyDetails,
+          'Thieving Skill Points': getThievingPointsToSpend(selectedClass, parseLevelTitle(currentSheet.levelTitle), nextThievingSkills),
+        },
+        thievingSkills: nextThievingSkills,
+        turningUndead: getTurningUndeadDefaults(selectedClass, parseLevelTitle(currentSheet.levelTitle)),
+        ...dexterityUpdates,
+      };
+    });
   };
 
   const handleRaceChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const race = event.target.value;
+
+    if (race && !isRaceAllowedForClass(characterClass, race)) {
+      return;
+    }
 
     setSheet((currentSheet) => {
       const nextSheet = {
         ...currentSheet,
         race,
         racialBonuses: RACIAL_ABILITIES[race] ?? RACIAL_ADJUSTMENTS[race] ?? '',
-        thievingSkills: recalculateThievingSkills(currentSheet.thievingSkills, race, currentSheet.abilityDetails.Dexterity),
+        thievingSkills: recalculateThievingSkills(currentSheet.thievingSkills, race, currentSheet.abilityDetails.Dexterity, characterClass),
       };
 
       return nextSheet;
@@ -862,11 +960,32 @@ export default function AddCharacterPage() {
     if (section === 'hitPointDetails') {
       setSheet((currentSheet) => ({
         ...currentSheet,
-        hitPointDetails: withCalculatedTotalHitPoints({
-          ...currentSheet.hitPointDetails,
-          [field]: value,
-        }),
+        hitPointDetails: withLevelAwareTotalHitPoints(
+          {
+            ...currentSheet.hitPointDetails,
+            [field]: value,
+          },
+          parseLevelTitle(currentSheet.levelTitle),
+        ),
       }));
+
+      return;
+    }
+
+    if (section === 'combatDetails' && field === 'Base THACO') {
+      setSheet((currentSheet) => {
+        const combatDetails = {
+          ...currentSheet.combatDetails,
+          [field]: value,
+        };
+        const context = getWeaponRowContext({ ...currentSheet, combatDetails }, characterClass);
+
+        return {
+          ...currentSheet,
+          combatDetails,
+          weaponRows: enrichAllWeaponRows(currentSheet.weaponRows, context),
+        };
+      });
 
       return;
     }
@@ -945,11 +1064,41 @@ export default function AddCharacterPage() {
     });
   };
 
+  const removeStartingEquipmentLine = (index: number) => {
+    setSheet((currentSheet) => ({
+      ...currentSheet,
+      equipmentDetails: {
+        ...currentSheet.equipmentDetails,
+        [`Starting Equipment ${index + 1}`]: '',
+      },
+    }));
+  };
+
+  const removeEquipmentBucketLine = (field: string, rowIndex: number) => {
+    setSheet((currentSheet) => {
+      const { removedLine, nextValue } = removeLineFromBucket(currentSheet.equipmentDetails[field] ?? '', rowIndex);
+      const nextEquipmentDetails = {
+        ...currentSheet.equipmentDetails,
+        [field]: nextValue,
+      };
+
+      return syncSheetAfterEquipmentRemoval(
+        {
+          ...currentSheet,
+          equipmentDetails: nextEquipmentDetails,
+        },
+        removedLine,
+        field,
+        characterClass,
+      );
+    });
+  };
+
   const updateAbilityScoreField = (ability: 'Strength' | 'Dexterity' | 'Constitution' | 'Intelligence' | 'Wisdom' | 'Charisma') => (event: ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
 
     setSheet((currentSheet) => {
-      const abilityDetails = {
+      let abilityDetails = {
         ...currentSheet.abilityDetails,
         [ability]: value,
       };
@@ -981,14 +1130,17 @@ export default function AddCharacterPage() {
             ...row,
             speedReactionAdj: '',
           }));
-          thievingSkills = recalculateThievingSkills(currentSheet.thievingSkills, currentSheet.race, '');
+          thievingSkills = recalculateThievingSkills(currentSheet.thievingSkills, currentSheet.race, '', characterClass);
         }
 
         if (ability === 'Constitution') {
-          hitPointDetails = withCalculatedTotalHitPoints({
-            ...currentSheet.hitPointDetails,
-            Adjustment: '',
-          });
+          hitPointDetails = withLevelAwareTotalHitPoints(
+            {
+              ...currentSheet.hitPointDetails,
+              Adjustment: '',
+            },
+            parseLevelTitle(currentSheet.levelTitle),
+          );
         }
 
         if (ability === 'Wisdom') {
@@ -1006,6 +1158,14 @@ export default function AddCharacterPage() {
           proficiencyDetails,
           thievingSkills,
           weaponRows,
+          ...(hasClassXpBonusRule(characterClass) && (ability === 'Intelligence' || ability === 'Dexterity')
+            ? {
+                experienceDetails: {
+                  ...currentSheet.experienceDetails,
+                  Bonus: getClassXpBonusFieldValue(characterClass, abilityDetails),
+                },
+              }
+            : {}),
         };
       }
 
@@ -1027,22 +1187,15 @@ export default function AddCharacterPage() {
       }
 
       if (ability === 'Dexterity') {
-        const autofill = getDexterityAutofill(value);
-        if (autofill) {
-          abilityDetails['Dexterity Reac Adj'] = autofill.reaction;
-          abilityDetails['Dexterity Msl Att Adj'] = autofill.missile;
-          abilityDetails['Dexterity Def Adj (AC)'] = autofill.defense;
-          abilityDetails['Dexterity Parry'] = autofill.parry;
-          armorDetails = withCalculatedRealArmorClass({
-            ...currentSheet.armorDetails,
-            Base: getDexterityArmorBase(autofill.defense),
-          });
-          weaponRows = currentSheet.weaponRows.map((row) => ({
-            ...row,
-            speedReactionAdj: autofill.reaction,
-          }));
-          thievingSkills = recalculateThievingSkills(currentSheet.thievingSkills, currentSheet.race, value);
-        }
+        const dexterityUpdates = applyDexterityAdjustmentsToSheet(
+          { ...currentSheet, abilityDetails },
+          characterClass,
+          value,
+        );
+        abilityDetails = dexterityUpdates.abilityDetails;
+        armorDetails = dexterityUpdates.armorDetails;
+        weaponRows = dexterityUpdates.weaponRows;
+        thievingSkills = recalculateThievingSkills(currentSheet.thievingSkills, currentSheet.race, value, characterClass);
       }
 
       if (ability === 'Constitution') {
@@ -1053,10 +1206,13 @@ export default function AddCharacterPage() {
           abilityDetails['Constitution Res Sur'] = autofill.resurrection;
           abilityDetails['Constitution Poison Save'] = autofill.poison;
           abilityDetails['Constitution Regen'] = autofill.regen;
-          hitPointDetails = withCalculatedTotalHitPoints({
-            ...currentSheet.hitPointDetails,
-            Adjustment: getClassHitPointAdjustment(autofill.hp, characterClass),
-          });
+          hitPointDetails = withLevelAwareTotalHitPoints(
+            {
+              ...currentSheet.hitPointDetails,
+              Adjustment: getClassHitPointAdjustment(autofill.hp, characterClass),
+            },
+            parseLevelTitle(currentSheet.levelTitle),
+          );
         }
       }
 
@@ -1094,7 +1250,7 @@ export default function AddCharacterPage() {
         }
       }
 
-      return {
+      const nextSheet = {
         ...currentSheet,
         abilityDetails,
         armorDetails,
@@ -1108,6 +1264,20 @@ export default function AddCharacterPage() {
         proficiencyDetails,
         thievingSkills,
         weaponRows,
+        ...(hasClassXpBonusRule(characterClass) && (ability === 'Intelligence' || ability === 'Dexterity')
+          ? {
+              experienceDetails: {
+                ...currentSheet.experienceDetails,
+                Bonus: getClassXpBonusFieldValue(characterClass, abilityDetails),
+              },
+            }
+          : {}),
+      };
+      const context = getWeaponRowContext(nextSheet, characterClass);
+
+      return {
+        ...nextSheet,
+        weaponRows: enrichAllWeaponRows(nextSheet.weaponRows, context),
       };
     });
   };
@@ -1138,7 +1308,27 @@ export default function AddCharacterPage() {
     setSheet((currentSheet) => ({
       ...currentSheet,
       weaponRows: currentSheet.weaponRows.map((row, index) => (
-        index === rowIndex ? { ...row, [field]: value } : row
+        index === rowIndex
+          ? updateWeaponRowField(row, field, value, getWeaponRowContext(currentSheet, characterClass))
+          : row
+      )),
+    }));
+  };
+
+  const handleWeaponSelect = (rowIndex: number) => (event: ChangeEvent<HTMLSelectElement>) => {
+    const value = event.target.value;
+    const selectedSoulSword = isSoulSwordLine(value);
+
+    setSheet((currentSheet) => ({
+      ...currentSheet,
+      weaponRows: currentSheet.weaponRows.map((row, index) => (
+        index === rowIndex
+          ? {
+            ...applyWeaponSelectionToRow(row, value, getWeaponRowContext(currentSheet, characterClass)),
+            soulSwordColor: selectedSoulSword ? '' : '',
+            soulSwordIgnited: selectedSoulSword ? false : false,
+          }
+          : row
       )),
     }));
   };
@@ -1153,15 +1343,71 @@ export default function AddCharacterPage() {
     }));
   };
 
-  const updateWeaponProficiencyRow = (rowIndex: number, field: keyof ProficiencyRow) => (event: ChangeEvent<HTMLInputElement>) => {
+  const updateSoulSwordColor = (event: ChangeEvent<HTMLSelectElement>) => {
+    const color = event.target.value.toLowerCase();
+
+    setSheet((currentSheet) => {
+      if (selectedSoulSwordIndex < 0) {
+        return currentSheet;
+      }
+
+      const weaponRows = currentSheet.weaponRows.map((row, index) => (
+        index === selectedSoulSwordIndex ? { ...row, soulSwordColor: color } : row
+      ));
+      const context = getWeaponRowContext(currentSheet, characterClass);
+
+      return {
+        ...currentSheet,
+        weaponRows: enrichAllWeaponRows(weaponRows, context),
+      };
+    });
+  };
+
+  const toggleSoulSwordIgnite = () => {
+    setSheet((currentSheet) => {
+      if (selectedSoulSwordIndex < 0) {
+        return currentSheet;
+      }
+
+      const weaponRows = currentSheet.weaponRows.map((row, index) => (
+        index === selectedSoulSwordIndex
+          ? { ...row, soulSwordIgnited: !row.soulSwordIgnited }
+          : row
+      ));
+      const context = getWeaponRowContext(currentSheet, characterClass);
+
+      return {
+        ...currentSheet,
+        weaponRows: enrichAllWeaponRows(weaponRows, context),
+      };
+    });
+  };
+
+  const updateWeaponProficiencyRow = (rowIndex: number, field: keyof ProficiencyRow) => (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const value = event.target.value;
 
-    setSheet((currentSheet) => ({
-      ...currentSheet,
-      weaponProficiencies: currentSheet.weaponProficiencies.map((row, index) => (
-        index === rowIndex ? { ...row, [field]: value } : row
-      )),
-    }));
+    setSheet((currentSheet) => {
+      const weaponProficiencies = currentSheet.weaponProficiencies.map((row, index) => {
+        if (index !== rowIndex) return row;
+
+        if (field === 'name') {
+          return {
+            ...row,
+            name: value,
+            slots: value.trim() ? '0' : '',
+          };
+        }
+
+        return { ...row, [field]: value };
+      });
+      const context = getWeaponRowContext({ ...currentSheet, weaponProficiencies }, characterClass);
+
+      return {
+        ...currentSheet,
+        weaponProficiencies,
+        weaponRows: enrichAllWeaponRows(currentSheet.weaponRows, context),
+      };
+    });
   };
 
   const addWeaponProficiencyLine = () => {
@@ -1208,7 +1454,7 @@ export default function AddCharacterPage() {
       const updatedRows = currentSheet.thievingSkills.map((row, index) => (
         index === rowIndex ? { ...row, [field]: value } : row
       ));
-      const thievingSkills = recalculateThievingSkills(updatedRows, currentSheet.race, currentSheet.abilityDetails.Dexterity);
+      const thievingSkills = recalculateThievingSkills(updatedRows, currentSheet.race, currentSheet.abilityDetails.Dexterity, characterClass);
 
       return {
         ...currentSheet,
@@ -1221,124 +1467,83 @@ export default function AddCharacterPage() {
     });
   };
 
-  const updateSavingThrowRow = (rowIndex: number, field: keyof SavingThrowRow) => (event: ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-
+  const { updateSavingThrowRow, updateSavingThrowCheck } = createSavingThrowHandlers((updater) => {
     setSheet((currentSheet) => ({
       ...currentSheet,
-      savingThrowRows: currentSheet.savingThrowRows.map((row, index) => {
-        if (index !== rowIndex) {
-          return row;
-        }
-
-        if (field === 'real') {
-          const real = parseSavingNumber(value);
-          return { ...row, real: real === null ? value : String(clampSavingReal(real)) };
-        }
-
-        if (field === 'd4') {
-          const d4 = parseSavingNumber(value);
-          return { ...row, d4: d4 === null ? value : String(clampSavingD4(d4)) };
-        }
-
-        return { ...row, [field]: value };
-      }),
+      savingThrowRows: updater(currentSheet.savingThrowRows),
     }));
-  };
+  });
 
-  const updateSavingThrowCheck = (rowIndex: number, field: keyof SavingThrowRow) => (event: ChangeEvent<HTMLInputElement>) => {
-    const checked = event.target.checked;
+  const submitCharacter = async () => {
+    if (isSubmitting || authLoading) {
+      return;
+    }
 
-    setSheet((currentSheet) => ({
-      ...currentSheet,
-      savingThrowRows: currentSheet.savingThrowRows.map((row, index) => {
-        if (index !== rowIndex) {
-          return row;
-        }
-
-        const updatedRow = { ...row, [field]: checked } as SavingThrowRow;
-        const checkedCount = SAVING_THROW_CHECK_FIELDS.filter((checkField) => updatedRow[checkField]).length;
-        const parsedD4 = parseSavingNumber(updatedRow.d4);
-
-        if (parsedD4 === null) {
-          return updatedRow;
-        }
-
-        const requiredChecks = clampSavingD4(parsedD4);
-
-        if (checkedCount < requiredChecks) {
-          return updatedRow;
-        }
-
-        const real = clampSavingReal((parseSavingNumber(updatedRow.real) ?? 2) - 1);
-        const d4 = clampSavingD4(requiredChecks - 1);
-
-        return {
-          ...updatedRow,
-          real: String(real),
-          d4: String(d4),
-          check1: false,
-          check2: false,
-          check3: false,
-          check4: false,
-        };
-      }),
-    }));
-  };
-
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
+    setIsSubmitting(true);
     const trimmedName = name.trim();
-    const parsedLevel = mode === 'new' ? parseLevelTitle(sheet.levelTitle) : Number(level);
-    const parsedMaxMagicPoints = mode === 'new'
-      ? calculateSheetMagicPoints(characterClass, parsedLevel, sheet)
+    const effectiveClass = characterClass || 'Fighter';
+    const rawLevel = mode === 'new' ? parseLevelTitle(sheet.levelTitle) : Number(level);
+    const parsedLevel = Number.isFinite(rawLevel) && rawLevel > 0 ? Math.floor(rawLevel) : 1;
+    const rawMaxMagicPoints = mode === 'new'
+      ? calculateSheetMagicPoints(effectiveClass, parsedLevel, sheet)
       : Number(maxMagicPoints);
+    const parsedMaxMagicPoints = Number.isFinite(rawMaxMagicPoints) && rawMaxMagicPoints >= 0
+      ? Math.floor(rawMaxMagicPoints)
+      : 0;
     const parsedMaxHitPoints = mode === 'new'
       ? parseHitPointValue(sheet.hitPointDetails['Total HP']) ?? parseHitPointValue(sheet.hitPointDetails.Full) ?? parseHitPointValue(sheet.hitPointDetails.Current) ?? 0
       : 0;
     const parsedHitPoints = mode === 'new'
       ? parseHitPointValue(sheet.hitPointDetails['Total HP']) ?? parseHitPointValue(sheet.hitPointDetails.Current) ?? parsedMaxHitPoints
       : parsedMaxHitPoints;
+    setError('');
 
     if (!trimmedName) {
       setError('Character name is required.');
+      setIsSubmitting(false);
       return;
     }
 
-    if (!characterClass) {
-      setError('Character class is required.');
-      return;
+    try {
+      if (!authReady || !authUserUid) {
+        throw new Error('You must be logged in to create a character.');
+      }
+
+      const character = await addCharacter(
+        {
+          name: trimmedName,
+          class: effectiveClass,
+          characterClass: effectiveClass,
+          level: parsedLevel,
+          magicPoints: parsedMaxMagicPoints,
+          maxMagicPoints: parsedMaxMagicPoints,
+          hitPoints: Math.min(parsedHitPoints, parsedMaxHitPoints),
+          maxHitPoints: parsedMaxHitPoints,
+        },
+        mode === 'new' ? sheet : undefined,
+      );
+
+      if (mode === 'new') {
+        void syncMagicPointsFromSheet(character.id, effectiveClass, parsedLevel);
+      }
+
+      const params = new URLSearchParams({ selectedCharacter: character.name, characterId: String(character.id) });
+      console.log('[add-character] before router.push', { characterId: character.id, uid: authUserUid });
+      router.push(`/dashboard?${params.toString()}`);
+      console.log('[add-character] router.push called', { path: `/dashboard?${params.toString()}` });
+    } catch (submitError) {
+      const message = submitError instanceof Error
+        ? submitError.message
+        : 'Unable to save character for the current account. Please make sure you are signed in.';
+      setError(message);
+    } finally {
+      setIsSubmitting(false);
     }
+  };
 
-    if (!Number.isFinite(parsedLevel) || parsedLevel < 1) {
-      setError('Level must be 1 or higher.');
-      return;
-    }
-
-    if (!Number.isFinite(parsedMaxMagicPoints) || parsedMaxMagicPoints < 0) {
-      setError('Magic points must be 0 or higher.');
-      return;
-    }
-
-    const character = addCharacter({
-      name: trimmedName,
-      class: characterClass,
-      characterClass,
-      level: parsedLevel,
-      magicPoints: parsedMaxMagicPoints,
-      maxMagicPoints: parsedMaxMagicPoints,
-      hitPoints: Math.min(parsedHitPoints, parsedMaxHitPoints),
-      maxHitPoints: parsedMaxHitPoints,
-    });
-
-    if (mode === 'new') {
-      setCharacterSheet(character.id, sheet);
-      syncMagicPointsFromSheet(character.id, characterClass, parsedLevel);
-    }
-
-    const params = new URLSearchParams({ selectedCharacter: character.name, characterId: String(character.id) });
-    router.push(`/dashboard?${params.toString()}`);
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    submitCharacter();
   };
 
   return (
@@ -1349,10 +1554,26 @@ export default function AddCharacterPage() {
             <p style={styles.eyebrow}>Characters</p>
             <h1 style={styles.title}>Add Character</h1>
           </div>
-          <button type="button" onClick={() => router.push('/characters')} style={styles.backButton}>
-            Back
-          </button>
+          <div style={styles.headerActions}>
+            <button type="button" onClick={() => router.push('/characters')} style={styles.backButton}>
+              Back
+            </button>
+            <Buttons
+              type="button"
+              onPress={submitCharacter}
+              disabled={isSubmitting || authLoading || !authReady || !authUserUid}
+              style={styles.createButton}
+            >
+              {authLoading
+                ? 'Loading account...'
+                : isSubmitting
+                  ? 'Creating...'
+                  : (mode === 'new' ? 'Create Character' : 'Add Existing Character')}
+            </Buttons>
+          </div>
         </div>
+
+        {error && <p style={styles.error}>{error}</p>}
 
         <div style={styles.modeRow}>
           <button type="button" onClick={() => setMode('new')} style={{ ...styles.modeButton, ...(mode === 'new' ? styles.modeButtonActive : {}) }}>
@@ -1424,7 +1645,7 @@ export default function AddCharacterPage() {
                       <span style={styles.lineLabel}>Race:</span>
                       <select value={sheet.race} onChange={handleRaceChange} style={styles.lineInput}>
                         <option value="">Select race</option>
-                        {RACE_OPTIONS.map((race) => <option key={race} value={race}>{race}</option>)}
+                        <RaceSelectOptions characterClass={characterClass} />
                       </select>
                     </label>
                     <label style={styles.lineField}><span style={styles.lineLabel}>Alignment:</span><input value={sheet.alignment} onChange={updateSheetField('alignment')} style={styles.lineInput} /></label>
@@ -1460,7 +1681,15 @@ export default function AddCharacterPage() {
 
                   <label style={styles.textBlock}><span style={styles.lineLabel}>Languages:</span><textarea value={sheet.languages} onChange={updateSheetField('languages')} style={styles.sheetTextarea} /></label>
                   <label style={styles.textBlock}><span style={styles.lineLabel}>Racial Bonuses and Abilities:</span><textarea value={sheet.racialBonuses} onChange={updateSheetField('racialBonuses')} style={{ ...styles.sheetTextarea, minHeight: 220 }} /></label>
-                  <label style={styles.textBlock}><span style={styles.lineLabel}>Special Abilities and Restrictions:</span><textarea value={sheet.specialAbilities} onChange={updateSheetField('specialAbilities')} style={styles.sheetTextarea} /></label>
+                  <div style={styles.textBlock}>
+                    <span style={styles.lineLabel}>Special Abilities and Restrictions:</span>
+                    <textarea
+                      value={sheet.specialAbilities}
+                      onChange={updateSheetField('specialAbilities')}
+                      wrap="off"
+                      style={styles.specialAbilitiesTextarea}
+                    />
+                  </div>
                   <label style={styles.textBlock}><span style={styles.lineLabel}>Notes/History:</span><textarea value={sheet.notes} onChange={updateSheetField('notes')} style={{ ...styles.sheetTextarea, minHeight: 360 }} /></label>
                 </>
               ) : activeSheetPage === 'Page 2' ? (
@@ -1581,7 +1810,15 @@ export default function AddCharacterPage() {
                       <h3 style={styles.sheetSectionTitle}>Experience Points</h3>
                       <div style={styles.miniGrid}>
                         {['Current', 'Bonus', 'Next XP Target', 'To Reach Level'].map((field) => (
-                          <label key={field} style={styles.compactLineField}><span style={styles.lineLabel}>{field}:</span><input value={sheet.experienceDetails[field]} onChange={updateSheetRecordField('experienceDetails', field)} style={styles.lineInput} /></label>
+                          <label key={field} style={styles.compactLineField}>
+                            <span style={styles.lineLabel}>{field}:</span>
+                            <input
+                              value={sheet.experienceDetails[field]}
+                              onChange={updateSheetRecordField('experienceDetails', field)}
+                              readOnly={field === 'Bonus' && hasClassXpBonusRule(characterClass)}
+                              style={styles.lineInput}
+                            />
+                          </label>
                         ))}
                       </div>
                       <p style={styles.ruleNote}>Experience Points and Hit Points begins in Chapter 3 (pg. 35).</p>
@@ -1642,7 +1879,34 @@ export default function AddCharacterPage() {
                   <div style={styles.sheetSection}>
                     <div style={styles.weaponHeader}>
                       <h3 style={styles.sheetSectionTitle}>Weapons</h3>
-                      <button type="button" onClick={addWeaponLine} style={styles.smallActionButton}>Add weapon</button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        {selectedSoulSwordRow && (
+                          <>
+                            <select
+                              value={selectedSoulSwordRow.soulSwordColor}
+                              onChange={updateSoulSwordColor}
+                              style={{ ...styles.lineInput, minWidth: 110 }}
+                            >
+                              <option value="">Select color</option>
+                              {SOUL_SWORD_COLOR_OPTIONS.map((color) => (
+                                <option key={color} value={color.toLowerCase()}>{color}</option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={toggleSoulSwordIgnite}
+                              style={styles.smallActionButton}
+                              disabled={!selectedSoulSwordRow.soulSwordColor}
+                            >
+                              {selectedSoulSwordRow.soulSwordIgnited ? 'Unignite' : 'Ignite'}
+                            </button>
+                            {selectedSoulSwordRow.soulSwordIgnited && (
+                              <span style={{ ...styles.lineLabel, color: '#7f1d1d' }}>Critical on a 16-20</span>
+                            )}
+                          </>
+                        )}
+                        <button type="button" onClick={addWeaponLine} style={styles.smallActionButton}>Add weapon</button>
+                      </div>
                     </div>
                     <div style={styles.weaponTable}>
                       <div style={{ ...styles.weaponTableGroupHead, gridColumn: '1 / span 1' }}>Weapon</div>
@@ -1668,22 +1932,40 @@ export default function AddCharacterPage() {
                       <div style={styles.weaponTableHead}>R</div>
                       {sheet.weaponRows.map((row, rowIndex) => (
                         <React.Fragment key={row.id}>
-                          <input value={row.weapon} onChange={updateWeaponRow(rowIndex, 'weapon')} style={styles.tableInput} />
-                          <input value={row.wac} onChange={updateWeaponRow(rowIndex, 'wac')} style={styles.tableInput} />
-                          <input value={row.thacoWeaponBonus} onChange={updateWeaponRow(rowIndex, 'thacoWeaponBonus')} style={styles.tableInput} />
-                          <input value={row.thacoStrengthBonus} onChange={updateWeaponRow(rowIndex, 'thacoStrengthBonus')} style={styles.tableInput} />
-                          <input value={row.thacoSpecialization} onChange={updateWeaponRow(rowIndex, 'thacoSpecialization')} style={styles.tableInput} />
-                          <input value={row.thacoReal} onChange={updateWeaponRow(rowIndex, 'thacoReal')} style={styles.tableInput} />
-                          <input value={row.speedBase} onChange={updateWeaponRow(rowIndex, 'speedBase')} style={styles.tableInput} />
-                          <input value={row.speedReactionAdj} onChange={updateWeaponRow(rowIndex, 'speedReactionAdj')} style={styles.tableInput} />
-                          <input value={row.speedWeaponBonus} onChange={updateWeaponRow(rowIndex, 'speedWeaponBonus')} style={styles.tableInput} />
-                          <input value={row.speedReal} onChange={updateWeaponRow(rowIndex, 'speedReal')} style={styles.tableInput} />
-                          <input value={row.damageSmallMedium} onChange={updateWeaponRow(rowIndex, 'damageSmallMedium')} style={styles.tableInput} />
-                          <input value={row.damageLarge} onChange={updateWeaponRow(rowIndex, 'damageLarge')} style={styles.tableInput} />
-                          <input value={row.damageWeaponBonus} onChange={updateWeaponRow(rowIndex, 'damageWeaponBonus')} style={styles.tableInput} />
-                          <input value={row.damageStrengthBonus} onChange={updateWeaponRow(rowIndex, 'damageStrengthBonus')} style={styles.tableInput} />
-                          <input value={row.damageSpecialization} onChange={updateWeaponRow(rowIndex, 'damageSpecialization')} style={styles.tableInput} />
-                          <input value={row.damageReal} onChange={updateWeaponRow(rowIndex, 'damageReal')} style={styles.tableInput} />
+                          {WEAPON_FIELDS.map((field) => {
+                            const isSoulSwordIgnited = isSoulSwordLine(row.weapon) && row.soulSwordIgnited;
+                            const soulSwordGlow = isSoulSwordIgnited
+                              ? { boxShadow: `inset 0 0 0 2px ${getSoulSwordGlowColor(row.soulSwordColor)}, 0 0 10px ${getSoulSwordGlowColor(row.soulSwordColor)}` }
+                              : {};
+
+                            if (field === 'weapon') {
+                              return (
+                                <select
+                                  key={`${row.id}-${field}`}
+                                  value={row[field]}
+                                  onChange={handleWeaponSelect(rowIndex)}
+                                  style={{ ...styles.tableInput, ...soulSwordGlow }}
+                                >
+                                  <option value="">Select Weapon</option>
+                                  {getWeaponEquipmentLines(sheet.equipmentDetails, row.weapon).map((line) => (
+                                    <option key={line} value={line}>{getWeaponDisplayLabel(line)}</option>
+                                  ))}
+                                </select>
+                              );
+                            }
+
+                            return (
+                              <input
+                                key={`${row.id}-${field}`}
+                                value={getWeaponFieldDisplayValue(field, row[field] as string)}
+                                onChange={updateWeaponRow(rowIndex, field)}
+                                readOnly={WEAPON_DERIVED_READONLY_FIELDS.includes(field)}
+                                style={WEAPON_CHART_CENTERED_FIELDS.includes(field)
+                                  ? { ...styles.centeredTableInput, ...soulSwordGlow }
+                                  : { ...styles.tableInput, ...soulSwordGlow }}
+                              />
+                            );
+                          })}
                         </React.Fragment>
                       ))}
                     </div>
@@ -1698,9 +1980,28 @@ export default function AddCharacterPage() {
                       {THACO_ARMOR_CLASSES.map((armorClass) => <div key={armorClass} style={styles.weaponTableHead}>{armorClass}</div>)}
                       {sheet.weaponRows.map((row, rowIndex) => (
                         <React.Fragment key={`${row.id}-chart`}>
-                          <div style={styles.thacoWeaponName}>{row.weapon || `Weapon ${rowIndex + 1}`}</div>
+                          <div
+                            style={{
+                              ...styles.thacoWeaponName,
+                              ...(isSoulSwordLine(row.weapon) && row.soulSwordIgnited
+                                ? { boxShadow: `inset 0 0 0 2px ${getSoulSwordGlowColor(row.soulSwordColor)}, 0 0 10px ${getSoulSwordGlowColor(row.soulSwordColor)}` }
+                                : {}),
+                            }}
+                          >
+                            {getWeaponDisplayLabel(row.weapon) || `Weapon ${rowIndex + 1}`}
+                          </div>
                           {THACO_ARMOR_CLASSES.map((armorClass) => (
-                            <div key={`${row.id}-${armorClass}`} style={styles.thacoCell}>{getThacoTarget(row.thacoReal, armorClass)}</div>
+                            <div
+                              key={`${row.id}-${armorClass}`}
+                              style={{
+                                ...styles.thacoCell,
+                                ...(isSoulSwordLine(row.weapon) && row.soulSwordIgnited
+                                  ? { boxShadow: `inset 0 0 0 2px ${getSoulSwordGlowColor(row.soulSwordColor)}, 0 0 10px ${getSoulSwordGlowColor(row.soulSwordColor)}` }
+                                  : {}),
+                              }}
+                            >
+                              {getWeaponThacoChartTarget(row, armorClass)}
+                            </div>
                           ))}
                         </React.Fragment>
                       ))}
@@ -1719,8 +2020,35 @@ export default function AddCharacterPage() {
                       <div style={styles.weaponTableHead}>Slots</div>
                       {sheet.weaponProficiencies.map((row, rowIndex) => (
                         <React.Fragment key={row.id}>
-                          <input value={row.name} onChange={updateWeaponProficiencyRow(rowIndex, 'name')} style={styles.tableInput} />
-                          <input value={row.slots} onChange={updateWeaponProficiencyRow(rowIndex, 'slots')} style={styles.tableInput} />
+                          <select
+                            value={row.name}
+                            onChange={updateWeaponProficiencyRow(rowIndex, 'name')}
+                            style={styles.tableInput}
+                          >
+                            <option value="">Select Weapon</option>
+                            {getWeaponEquipmentLines(sheet.equipmentDetails, row.name).map((line) => (
+                              <option key={line} value={line}>{getWeaponDisplayLabel(line)}</option>
+                            ))}
+                          </select>
+                          <select
+                            value={row.slots}
+                            onChange={updateWeaponProficiencyRow(rowIndex, 'slots')}
+                            style={styles.centeredTableInput}
+                          >
+                            <option value="">Slots</option>
+                            {weaponProficiencySlotOptions.map((slotOption) => (
+                              <option
+                                key={slotOption.value}
+                                value={slotOption.value}
+                                disabled={Boolean(
+                                  slotOption.minLevel
+                                  && currentClassLevel < slotOption.minLevel,
+                                )}
+                              >
+                                {slotOption.label}
+                              </option>
+                            ))}
+                          </select>
                         </React.Fragment>
                       ))}
                     </div>
@@ -1869,8 +2197,8 @@ export default function AddCharacterPage() {
                         <React.Fragment key={row.id}>
                           <input value={row.name} onChange={updateSavingThrowRow(rowIndex, 'name')} style={styles.tableInput} />
                           <input value={row.base} onChange={updateSavingThrowRow(rowIndex, 'base')} style={styles.centeredTableInput} />
-                          <input value={row.real} onChange={updateSavingThrowRow(rowIndex, 'real')} style={styles.centeredTableInput} />
-                          <input value={row.d4} onChange={updateSavingThrowRow(rowIndex, 'd4')} style={styles.centeredTableInput} />
+                          <input value={row.real} onChange={updateSavingThrowRow(rowIndex, 'real')} inputMode="numeric" style={styles.centeredTableInput} type="text" />
+                          <input value={row.d4} onChange={updateSavingThrowRow(rowIndex, 'd4')} inputMode="numeric" style={styles.centeredTableInput} type="text" />
                           {SAVING_THROW_CHECK_FIELDS.map((checkField) => (
                             <label key={`${row.id}-${checkField}`} style={styles.checkboxCell}>
                               <input
@@ -1891,7 +2219,7 @@ export default function AddCharacterPage() {
                       <h3 style={styles.sheetSectionTitle}>Saving Throw Reductions</h3>
                       <textarea
                         readOnly
-                        value={getSavingThrowReductionSummary(sheet)}
+                        value={getSavingThrowReductionSummary(sheet, characterClass)}
                         style={{ ...styles.sheetTextarea, minHeight: 110 }}
                       />
                     </div>
@@ -1938,11 +2266,12 @@ export default function AddCharacterPage() {
                     </div>
                     <div style={styles.equipmentList}>
                       {STARTING_EQUIPMENT.map((item, index) => (
-                        <input
+                        <EquipmentItemRow
                           key={item}
                           value={sheet.equipmentDetails[`Starting Equipment ${index + 1}`]}
                           onChange={updateSheetRecordField('equipmentDetails', `Starting Equipment ${index + 1}`)}
-                          style={styles.equipmentItemInput}
+                          onRemove={() => removeStartingEquipmentLine(index)}
+                          inputStyle={styles.equipmentItemInput}
                         />
                       ))}
                     </div>
@@ -1955,11 +2284,12 @@ export default function AddCharacterPage() {
                     </div>
                     <div style={styles.equipmentList}>
                       {getEquipmentBucketLines('Other').map((item, index) => (
-                        <input
+                        <EquipmentItemRow
                           key={`other-equipment-${index}`}
                           value={item}
                           onChange={updateEquipmentBucketLine('Other', index)}
-                          style={styles.equipmentItemInput}
+                          onRemove={() => removeEquipmentBucketLine('Other', index)}
+                          inputStyle={styles.equipmentItemInput}
                         />
                       ))}
                     </div>
@@ -1974,11 +2304,12 @@ export default function AddCharacterPage() {
                         </div>
                         <div style={styles.equipmentList}>
                           {getEquipmentBucketLines(field).map((item, index) => (
-                            <input
+                            <EquipmentItemRow
                               key={`${field}-equipment-${index}`}
                               value={item}
                               onChange={updateEquipmentBucketLine(field, index)}
-                              style={styles.equipmentItemInput}
+                              onRemove={() => removeEquipmentBucketLine(field, index)}
+                              inputStyle={styles.equipmentItemInput}
                             />
                           ))}
                         </div>
@@ -1994,11 +2325,6 @@ export default function AddCharacterPage() {
             </section>
           )}
 
-          {error && <p style={styles.error}>{error}</p>}
-
-          <div style={styles.actions}>
-            <Buttons type="submit">{mode === 'new' ? 'Create Character' : 'Add Existing Character'}</Buttons>
-          </div>
         </form>
 
         <EquipmentListModal
@@ -2026,6 +2352,11 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     marginBottom: 22,
   },
+  headerActions: {
+    alignItems: 'center',
+    display: 'flex',
+    gap: 10,
+  },
   eyebrow: {
     color: '#d4af37',
     fontSize: 14,
@@ -2045,6 +2376,9 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 800,
     minHeight: 40,
     padding: '0 14px',
+  },
+  createButton: {
+    minHeight: 40,
   },
   modeRow: {
     display: 'flex',
@@ -2622,6 +2956,25 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '6px 8px',
     resize: 'vertical',
   },
+  specialAbilitiesTextarea: {
+    background: [
+      'repeating-linear-gradient(rgba(251,239,201,0.64), rgba(251,239,201,0.64) 29px, rgba(78,46,20,0.28) 30px)',
+      'linear-gradient(135deg, rgba(255,252,230,0.32), rgba(126,78,32,0.08))',
+    ].join(', '),
+    backgroundAttachment: 'local',
+    border: '1px solid rgba(91,58,28,0.3)',
+    borderRadius: 6,
+    color: '#24180f',
+    fontFamily: '"Palatino Linotype", "Book Antiqua", Georgia, serif',
+    fontSize: 16,
+    lineHeight: '30px',
+    minHeight: 140,
+    maxHeight: 240,
+    outline: 'none',
+    overflow: 'auto',
+    padding: '6px 8px',
+    resize: 'vertical',
+  },
   placeholderPage: {
     border: '1px dashed rgba(91,64,38,0.42)',
     borderRadius: 6,
@@ -2637,8 +2990,5 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#fecaca',
     margin: 0,
     padding: 12,
-  },
-  actions: {
-    maxWidth: 240,
   },
 };

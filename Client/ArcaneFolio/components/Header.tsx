@@ -13,7 +13,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             </button>
             <div style={styles.titleContainer}>
                 <Logo />
-                <span style={styles.headerText}>Arcane Folio</span>
+                <span style={styles.headerText}>Adventurer's Codex</span>
             </div>
         </header>
     );

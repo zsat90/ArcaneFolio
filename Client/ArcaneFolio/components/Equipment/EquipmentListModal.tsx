@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import EquipmentListPanel from './EquipmentListPanel';
 
 type EquipmentListModalProps = {
@@ -9,6 +9,44 @@ type EquipmentListModalProps = {
 };
 
 export default function EquipmentListModal({ isOpen, onClose, onEquipLine, actionLabel }: EquipmentListModalProps) {
+  const scrollTopRef = useRef(0);
+
+  useEffect(() => {
+    if (!isOpen || typeof window === 'undefined') {
+      return;
+    }
+
+    const { body, documentElement } = document;
+    const previousBodyOverflow = body.style.overflow;
+    const previousBodyPosition = body.style.position;
+    const previousBodyTop = body.style.top;
+    const previousBodyLeft = body.style.left;
+    const previousBodyRight = body.style.right;
+    const previousBodyWidth = body.style.width;
+    const previousHtmlOverflow = documentElement.style.overflow;
+
+    scrollTopRef.current = window.scrollY || window.pageYOffset || 0;
+
+    body.style.overflow = 'hidden';
+    body.style.position = 'fixed';
+    body.style.top = `-${scrollTopRef.current}px`;
+    body.style.left = '0';
+    body.style.right = '0';
+    body.style.width = '100%';
+    documentElement.style.overflow = 'hidden';
+
+    return () => {
+      body.style.overflow = previousBodyOverflow;
+      body.style.position = previousBodyPosition;
+      body.style.top = previousBodyTop;
+      body.style.left = previousBodyLeft;
+      body.style.right = previousBodyRight;
+      body.style.width = previousBodyWidth;
+      documentElement.style.overflow = previousHtmlOverflow;
+      window.scrollTo(0, scrollTopRef.current);
+    };
+  }, [isOpen]);
+
   if (!isOpen) {
     return null;
   }
@@ -36,7 +74,9 @@ export default function EquipmentListModal({ isOpen, onClose, onEquipLine, actio
           </button>
         </div>
 
-        <EquipmentListPanel onEquipLine={onEquipLine} actionLabel={actionLabel} />
+        <div style={styles.contentScroll}>
+          <EquipmentListPanel onEquipLine={onEquipLine} actionLabel={actionLabel} />
+        </div>
       </section>
     </div>
   );
@@ -54,6 +94,7 @@ const styles: Record<string, React.CSSProperties> = {
     position: 'fixed',
     right: 0,
     top: 0,
+    overscrollBehavior: 'contain',
     zIndex: 50,
   },
   dialog: {
@@ -64,11 +105,19 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#f8fafc',
     display: 'grid',
     gap: 16,
-    maxHeight: '88vh',
+    gridTemplateRows: 'auto minmax(0, 1fr)',
+    maxHeight: 'calc(100vh - 32px)',
     maxWidth: 1080,
-    overflow: 'auto',
+    overflow: 'hidden',
     padding: 16,
     width: 'min(1080px, 100%)',
+  },
+  contentScroll: {
+    minHeight: 0,
+    overflowX: 'hidden',
+    overflowY: 'auto',
+    overscrollBehavior: 'contain',
+    WebkitOverflowScrolling: 'touch',
   },
   header: {
     alignItems: 'center',

@@ -1,0 +1,46 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Legacy top-level collection — migration read/delete only (not used by normal app flow)
+    match /characters/{characterId} {
+      allow read, delete: if isSignedIn()
+        && resource.data.ownerId == request.auth.uid;
+    }
+
+    match /users/{uid} {
+      allow read, create, update, delete: if isOwner(uid);
+
+      match /characters/{characterId} {
+        allow create: if isOwner(uid)
+          && request.resource.data.ownerId == uid;
+
+        allow read, delete: if isOwner(uid);
+
+        allow update: if isOwner(uid)
+          && request.resource.data.ownerId == uid
+          && (!('ownerId' in resource.data) || resource.data.ownerId == uid);
+
+        match /sheet/{docId} {
+          allow read, create, update, delete: if isOwner(uid);
+        }
+
+        match /spellbook/{docId} {
+          allow read, create, update, delete: if isOwner(uid);
+        }
+
+        match /state/{docId} {
+          allow read, create, update, delete: if isOwner(uid);
+        }
+      }
+    }
+  }
+}

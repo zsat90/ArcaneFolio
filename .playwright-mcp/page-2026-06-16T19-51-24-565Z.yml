@@ -1,0 +1,133 @@
+- generic [active] [ref=e1]:
+  - main [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - paragraph [ref=e8]: Characters
+        - heading "Add Character" [level=1] [ref=e9]
+      - button "Back" [ref=e10] [cursor=pointer]
+    - generic [ref=e11]:
+      - button "Create New" [ref=e12] [cursor=pointer]
+      - button "Add Existing" [ref=e13] [cursor=pointer]
+    - generic [ref=e14]:
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - heading "Trueshield Games Player Character Sheet" [level=2] [ref=e17]
+          - generic [ref=e18]:
+            - button "Page 1" [ref=e19] [cursor=pointer]
+            - button "Page 2" [ref=e20] [cursor=pointer]
+            - button "Page 3" [ref=e21] [cursor=pointer]
+            - button "Page 4" [ref=e22] [cursor=pointer]
+            - button "Page 5" [ref=e23] [cursor=pointer]
+        - generic [ref=e24]:
+          - generic [ref=e25]:
+            - generic [ref=e26]: "Character Name:"
+            - textbox "Character Name:" [ref=e27]
+          - generic [ref=e28]:
+            - generic [ref=e29]: "Player Name:"
+            - textbox "Player Name:" [ref=e30]
+          - generic [ref=e31]:
+            - generic [ref=e32]: "Character Alias:"
+            - textbox "Character Alias:" [ref=e33]
+          - generic [ref=e34]:
+            - generic [ref=e35]: "Class:"
+            - combobox "Class:" [ref=e36]:
+              - option "Select class" [selected]
+              - option "Wizard"
+              - option "Runeist"
+              - option "Bard"
+              - option "Priest"
+              - option "Druid"
+              - option "Rogue"
+              - option "Assassin"
+              - option "Fighter"
+              - option "Archer"
+              - option "Barbarian"
+              - option "Cavalier"
+              - option "Monk"
+              - option "Ranger"
+              - option "Paladin"
+              - option "Harbinger"
+              - option "Vanar Knight"
+          - generic [ref=e37]:
+            - generic [ref=e38]: "Race:"
+            - combobox "Race:" [ref=e39]:
+              - option "Select race" [selected]
+              - option "Human"
+              - option "Dwarf"
+              - option "Elf"
+              - option "Half-elf"
+              - option "Gnome"
+              - option "Halfling"
+          - generic [ref=e40]:
+            - generic [ref=e41]: "Alignment:"
+            - textbox "Alignment:" [ref=e42]
+          - generic [ref=e43]:
+            - generic [ref=e44]: "Deity:"
+            - textbox "Deity:" [ref=e45]
+          - generic [ref=e46]:
+            - generic [ref=e47]: "Level/Title:"
+            - combobox "Level/Title:" [ref=e48]:
+              - option "1" [selected]
+              - option "2"
+              - option "3"
+              - option "4"
+              - option "5"
+              - option "6"
+              - option "7"
+              - option "8"
+              - option "9"
+              - option "10"
+              - option "11"
+              - option "12"
+              - option "13"
+              - option "14"
+              - option "15"
+              - option "16"
+              - option "17"
+              - option "18"
+              - option "19"
+              - option "20"
+          - generic [ref=e49]:
+            - generic [ref=e50]: "Homeland:"
+            - textbox "Homeland:" [ref=e51]
+        - generic [ref=e52]:
+          - generic [ref=e53]:
+            - generic [ref=e54]: "Social Class:"
+            - combobox "Social Class:" [ref=e55]:
+              - option "Select" [selected]
+              - option "Lower-lower"
+              - option "Lower-middle"
+              - option "Middle-middle"
+              - option "Upper"
+          - generic [ref=e56]:
+            - generic [ref=e57]: "Sex:"
+            - textbox "Sex:" [ref=e58]
+          - generic [ref=e59]:
+            - generic [ref=e60]: "Age:"
+            - textbox "Age:" [ref=e61]
+          - generic [ref=e62]:
+            - generic [ref=e63]: "Height:"
+            - textbox "Height:" [ref=e64]
+          - generic [ref=e65]:
+            - generic [ref=e66]: "Weight:"
+            - textbox "Weight:" [ref=e67]
+          - generic [ref=e68]:
+            - generic [ref=e69]: "Eyes:"
+            - textbox "Eyes:" [ref=e70]
+          - generic [ref=e71]:
+            - generic [ref=e72]: "Hair:"
+            - textbox "Hair:" [ref=e73]
+        - generic [ref=e74]:
+          - generic [ref=e75]: "Languages:"
+          - textbox "Languages:" [ref=e76]
+        - generic [ref=e77]:
+          - generic [ref=e78]: "Racial Bonuses and Abilities:"
+          - textbox "Racial Bonuses and Abilities:" [ref=e79]
+        - generic [ref=e80]:
+          - generic [ref=e81]: "Special Abilities and Restrictions:"
+          - textbox "Special Abilities and Restrictions:" [ref=e82]
+        - generic [ref=e83]:
+          - generic [ref=e84]: "Notes/History:"
+          - textbox "Notes/History:" [ref=e85]
+      - button "Create Character" [ref=e87] [cursor=pointer]
+  - alert [ref=e88]
