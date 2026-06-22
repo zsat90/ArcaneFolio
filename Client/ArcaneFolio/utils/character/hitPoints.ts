@@ -37,18 +37,21 @@ export const calculateLevelAwareTotalHitPoints = (
   const hpRoll = parseHitPointValue(hitPointDetails['HP Roll']);
   const adjustment = parseHitPointValue(hitPointDetails.Adjustment);
   const levelUpBase = parseHitPointValue(hitPointDetails['Level Up HP Base']);
+  const existingTotal = parseHitPointValue(hitPointDetails['Total HP']);
 
-  if (hpRoll === null && adjustment === null && levelUpBase === null) {
-    return '';
+  if (levelUpBase === null && hpRoll === null) {
+    return hitPointDetails['Total HP'] ?? '';
   }
 
   if (levelUpBase !== null) {
     return String(Math.max(levelUpBase + (hpRoll ?? 0) + (adjustment ?? 0), 0));
   }
 
-  const boundedLevel = Math.max(levelValue || 1, 1);
-  const perLevelAdjustment = (adjustment ?? 0) * boundedLevel;
-  return String(Math.max((hpRoll ?? 0) + perLevelAdjustment, 0));
+  if (existingTotal !== null) {
+    return String(Math.max(existingTotal + (hpRoll ?? 0) + (adjustment ?? 0), 0));
+  }
+
+  return String(Math.max((hpRoll ?? 0) + (adjustment ?? 0), 0));
 };
 
 export const withLevelAwareTotalHitPoints = (

@@ -129,7 +129,6 @@ export const login = async (email: string, password: string) => {
         await ensureAuthPersistence();
         const auth = getFirebaseAuth();
         const credential = await signInWithEmailAndPassword(auth, email, password);
-        setActiveAccountFromUser(credential.user);
         return credential;
     } catch (error) {
         logAuthError('login', error);
@@ -148,7 +147,6 @@ export const signup = async (email: string, password: string, displayName?: stri
             await updateProfile(credential.user, { displayName });
         }
 
-        setActiveAccountFromUser(credential.user);
         return credential;
     } catch (error) {
         logAuthError('signup', error);
@@ -165,19 +163,21 @@ export const signInWithGoogle = async (): Promise<GoogleSignInResult> => {
     provider.setCustomParameters({ prompt: 'select_account' });
 
     if (shouldUseRedirectGoogleSignIn()) {
+        console.log('[firebase-auth] Google sign-in using redirect');
         await signInWithRedirect(auth, provider);
         return 'redirect';
     }
 
     try {
         const credential = await signInWithPopup(auth, provider);
-        setActiveAccountFromUser(credential.user);
+        console.log('[firebase-auth] Google sign-in success uid', credential.user.uid);
         return 'popup';
     } catch (error) {
         const code = getAuthErrorCode(error);
         logAuthError('signInWithGoogle-popup', error);
 
         if (code === 'auth/popup-blocked') {
+            console.log('[firebase-auth] Google popup blocked; falling back to redirect');
             await signInWithRedirect(auth, provider);
             return 'redirect';
         }
@@ -192,14 +192,13 @@ export const handleGoogleRedirectResult = async () => {
 
     try {
         const result = await getRedirectResult(auth);
+        console.log('[firebase-auth] getRedirectResult result', {
+            uid: result?.user?.uid ?? null,
+            hasResult: Boolean(result),
+        });
 
         if (result?.user) {
-            setActiveAccountFromUser(result.user);
             return true;
-        }
-
-        if (auth.currentUser) {
-            setActiveAccountFromUser(auth.currentUser);
         }
 
         return false;
@@ -219,4 +218,5 @@ export const getIdToken = async () => {
 export const logout = async () => {
     const auth = getFirebaseAuth();
     await signOut(auth);
+    setActiveAccountFromUser(null);
 };

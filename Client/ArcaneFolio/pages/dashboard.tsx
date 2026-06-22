@@ -1,7 +1,8 @@
 import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useSelectedCharacter } from '../utils/character/characterState';
+import { logout } from '../utils/auth/authService';
+import { clearSessionCharacterState, useSelectedCharacter } from '../utils/character/characterState';
 import {
   canUseSpellbook,
   SPELLBOOK_UNAVAILABLE_MESSAGE,
@@ -19,11 +20,20 @@ export default function DashboardPage() {
   const characterClass = persistedCharacter?.characterClass || persistedCharacter?.class || '';
   const canOpenSpellbook = canUseSpellbook(characterClass);
   const magicPoints = persistedCharacter
-    ? `${persistedCharacter.magicPoints ?? 0}/${persistedCharacter.maxMagicPoints ?? persistedCharacter.magicPoints ?? 0} MP`
+    ? `MP: ${persistedCharacter.magicPoints ?? 0} / ${persistedCharacter.maxMagicPoints ?? persistedCharacter.magicPoints ?? 0}`
     : null;
   const hitPoints = persistedCharacter
     ? `${persistedCharacter.hitPoints ?? 0}/${persistedCharacter.maxHitPoints ?? persistedCharacter.hitPoints ?? 0} HP`
     : null;
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } finally {
+      clearSessionCharacterState();
+      router.replace('/login');
+    }
+  };
 
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#0B1120', color: '#fff' }}>
@@ -34,9 +44,7 @@ export default function DashboardPage() {
             <Link href="/characters" legacyBehavior>
               <a style={styles.switchLink}>{hasSelectedCharacter ? 'Switch Character' : 'Add Character'}</a>
             </Link>
-            <Link href="/login" legacyBehavior>
-              <a style={styles.logoutLink}>Logout</a>
-            </Link>
+            <button type="button" onClick={handleLogout} style={styles.logoutButton}>Logout</button>
           </div>
         </nav>
 
@@ -107,6 +115,12 @@ export default function DashboardPage() {
               <span style={styles.cardText}>Browse magical item categories and generate random loot for your character.</span>
             </a>
           </Link>
+          <Link href="/dashboard/npcs" legacyBehavior>
+            <a style={styles.dashboardCard}>
+              <span style={styles.cardTitle}>NPCs</span>
+              <span style={styles.cardText}>Create, reference, and manage lightweight DM stat blocks.</span>
+            </a>
+          </Link>
         </section>
       </div>
     </main>
@@ -129,10 +143,14 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '8px 10px',
     textDecoration: 'none',
   },
-  logoutLink: {
+  logoutButton: {
+    background: 'transparent',
+    border: 0,
     color: '#FCA5A5',
+    cursor: 'pointer',
+    font: 'inherit',
     fontWeight: 700,
-    textDecoration: 'none',
+    padding: 0,
   },
   cardGrid: {
     display: 'grid',

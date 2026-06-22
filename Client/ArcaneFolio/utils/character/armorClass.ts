@@ -10,6 +10,7 @@ const ARMOR_REDUCTIONS: Record<string, number> = {
   Leather: 2,
   Padded: 2,
   'Plate mail': 7,
+  'Rigid Leather - Vanar/Sindar Armor': 8,
   'Ring mail': 3,
   'Scale mail': 4,
   'Splint mail': 5,

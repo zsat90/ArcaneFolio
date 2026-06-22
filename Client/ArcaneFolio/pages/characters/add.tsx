@@ -26,6 +26,7 @@ import {
 } from '../../utils/character/experience';
 import { COIN_FIELDS, deductEquipmentCost } from '../../utils/character/coins';
 import EquipmentItemRow from '../../components/CharacterSheet/EquipmentItemRow';
+import DeitySelectOptions from '../../components/CharacterSheet/DeitySelectOptions';
 import RaceSelectOptions from '../../components/CharacterSheet/RaceSelectOptions';
 import { getEquipmentLinesForCategory, withSelectedEquipmentOption } from '../../utils/character/equipment';
 import { removeLineFromBucket, syncSheetAfterEquipmentRemoval } from '../../utils/character/equipmentRemoval';
@@ -48,6 +49,7 @@ import {
   getWeaponEquipmentLines,
   getWeaponFieldDisplayValue,
   getWeaponRowContext,
+  hasCustomWeaponDamageValues,
   isSoulSwordLine,
   SOUL_SWORD_COLORS,
   updateWeaponRowField,
@@ -764,6 +766,20 @@ export default function AddCharacterPage() {
   const shieldOptions = withSelectedEquipmentOption(getEquipmentLinesForCategory(sheet.equipmentDetails, 'Shields'), sheet.armorDetails.Shield);
 
   useEffect(() => {
+    if (!characterClass) {
+      return;
+    }
+
+    setMaxMagicPoints(String(calculateSheetMagicPoints(characterClass, parseLevelTitle(sheet.levelTitle || level), sheet)));
+  }, [
+    characterClass,
+    level,
+    sheet.abilityDetails.Intelligence,
+    sheet.abilityDetails.Piety,
+    sheet.levelTitle,
+  ]);
+
+  useEffect(() => {
     const auth = getFirebaseAuth();
     console.log('[add-character] Firebase auth loading started');
     const suspiciousAuthTimer = window.setTimeout(() => {
@@ -958,6 +974,19 @@ export default function AddCharacterPage() {
     }
 
     if (section === 'hitPointDetails') {
+      if (field === 'Total HP') {
+        setSheet((currentSheet) => ({
+          ...currentSheet,
+          hitPointDetails: {
+            ...currentSheet.hitPointDetails,
+            'Total HP': value,
+            'Level Up HP Base': '',
+          },
+        }));
+
+        return;
+      }
+
       setSheet((currentSheet) => ({
         ...currentSheet,
         hitPointDetails: withLevelAwareTotalHitPoints(
@@ -1324,7 +1353,16 @@ export default function AddCharacterPage() {
       weaponRows: currentSheet.weaponRows.map((row, index) => (
         index === rowIndex
           ? {
-            ...applyWeaponSelectionToRow(row, value, getWeaponRowContext(currentSheet, characterClass)),
+            ...applyWeaponSelectionToRow(
+              row,
+              value,
+              getWeaponRowContext(currentSheet, characterClass),
+              {
+                replaceCustomDamage: hasCustomWeaponDamageValues(row)
+                  ? window.confirm('This weapon has custom damage values. Replace them with the new weapon defaults?\n\nOK = Replace\nCancel = Keep Current Values')
+                  : false,
+              },
+            ),
             soulSwordColor: selectedSoulSword ? '' : '',
             soulSwordIgnited: selectedSoulSword ? false : false,
           }
@@ -1649,7 +1687,13 @@ export default function AddCharacterPage() {
                       </select>
                     </label>
                     <label style={styles.lineField}><span style={styles.lineLabel}>Alignment:</span><input value={sheet.alignment} onChange={updateSheetField('alignment')} style={styles.lineInput} /></label>
-                    <label style={styles.lineField}><span style={styles.lineLabel}>Deity:</span><input value={sheet.deity} onChange={updateSheetField('deity')} style={styles.lineInput} /></label>
+                    <label style={styles.lineField}>
+                      <span style={styles.lineLabel}>Deity:</span>
+                      <select value={sheet.deity} onChange={updateSheetField('deity')} style={styles.lineInput}>
+                        <option value="">Select deity</option>
+                        <DeitySelectOptions />
+                      </select>
+                    </label>
                     <label style={styles.lineField}>
                       <span style={styles.lineLabel}>Level/Title:</span>
                       <select value={String(Math.min(parseLevelTitle(sheet.levelTitle), maxClassLevel))} onChange={updateSheetField('levelTitle')} style={styles.lineInput}>
@@ -1827,7 +1871,7 @@ export default function AddCharacterPage() {
                       <h3 style={styles.sheetSectionTitle}>Hit Points</h3>
                       <div style={styles.miniGrid}>
                         {['Per Level', 'HP Roll', 'Adjustment', 'Total HP'].map((field) => (
-                          <label key={field} style={styles.compactLineField}><span style={styles.lineLabel}>{field}:</span><input value={sheet.hitPointDetails[field]} onChange={updateSheetRecordField('hitPointDetails', field)} readOnly={field === 'Total HP'} style={styles.lineInput} /></label>
+                          <label key={field} style={styles.compactLineField}><span style={styles.lineLabel}>{field}:</span><input value={sheet.hitPointDetails[field]} onChange={updateSheetRecordField('hitPointDetails', field)} style={styles.lineInput} /></label>
                         ))}
                       </div>
                     </div>

@@ -1,6 +1,7 @@
 import type { ProficiencyRow, WeaponRow } from './characterSheetState';
 import { DEFAULT_BASE_THACO } from './characterSheetState';
-import { getWeaponProficiencyModifiersForWeapon, formatSpecializationValue } from './weaponProficiencies';
+import { getWeaponProficiencyModifiersForWeapon, formatSpecializationValue, getWeaponDisplayLabel } from './weaponProficiencies';
+import { getWeaponCatalogItem } from './weaponCatalog';
 
 export type ParsedWeaponLine = {
   bonusValue: string;
@@ -85,13 +86,42 @@ export const parseWeaponLine = (weaponLine: string): ParsedWeaponLine => {
   const speedMatch = weaponLine.match(/Speed\s+(\d+)/i);
   const baseSpeed = speedMatch?.[1] ?? '';
 
-  const smDamageMatch = weaponLine.match(/Damage\s+S-M\s+(\d+d\d+(?:\+\d+)?)/i);
+  const smDamageMatch = weaponLine.match(/Damage\s+S-M\s+(\d+d\d+(?:[+-]\d+)?)/i);
   const smDamage = smDamageMatch?.[1] ?? '';
 
-  const lDamageMatch = weaponLine.match(/;\s*L\s+(\d+d\d+(?:\+\d+)?)/i);
+  const lDamageMatch = weaponLine.match(/;\s*L\s+(\d+d\d+(?:[+-]\d+)?)/i);
   const lDamage = lDamageMatch?.[1] ?? '';
 
   return { bonusValue, baseSpeed, smDamage, lDamage };
+};
+
+export const getWeaponDefaultDamageValues = (weaponLine: string) => {
+  const parsed = parseWeaponLine(weaponLine);
+  const catalogItem = getWeaponCatalogItem(getWeaponDisplayLabel(weaponLine));
+
+  return {
+    damageSmallMedium: parsed.smDamage || catalogItem?.damageSmallMedium || '',
+    damageLarge: parsed.lDamage || catalogItem?.damageLarge || '',
+  };
+};
+
+const normalizeDamageFormula = (value: string) => value.trim().toLowerCase();
+
+export const hasCustomWeaponDamageValues = (row: Pick<WeaponRow, 'weapon' | 'damageSmallMedium' | 'damageLarge'>) => {
+  if (!row.weapon.trim()) {
+    return false;
+  }
+
+  const defaults = getWeaponDefaultDamageValues(row.weapon);
+  const currentSmallMedium = normalizeDamageFormula(row.damageSmallMedium);
+  const currentLarge = normalizeDamageFormula(row.damageLarge);
+  const defaultSmallMedium = normalizeDamageFormula(defaults.damageSmallMedium);
+  const defaultLarge = normalizeDamageFormula(defaults.damageLarge);
+
+  return (
+    Boolean(currentSmallMedium || currentLarge)
+    && (currentSmallMedium !== defaultSmallMedium || currentLarge !== defaultLarge)
+  );
 };
 
 export const parseNumericField = (value: string) => {
@@ -267,6 +297,7 @@ export const applyWeaponSelectionToRow = (
   row: WeaponRow,
   weaponLine: string,
   context?: WeaponRowContext,
+  options: { replaceCustomDamage?: boolean } = {},
 ): WeaponRow => {
   if (!weaponLine.trim()) {
     const clearedRow: WeaponRow = {
@@ -293,6 +324,8 @@ export const applyWeaponSelectionToRow = (
 
   const parsed = parseWeaponLine(weaponLine);
   const isSoulSword = isSoulSwordLine(weaponLine);
+  const defaults = getWeaponDefaultDamageValues(weaponLine);
+  const shouldReplaceDamage = !hasCustomWeaponDamageValues(row) || Boolean(options.replaceCustomDamage);
   const updatedRow: WeaponRow = {
     ...row,
     weapon: weaponLine,
@@ -301,8 +334,8 @@ export const applyWeaponSelectionToRow = (
     thacoWeaponBonus: isSoulSword ? '3' : parsed.bonusValue,
     speedBase: isSoulSword ? '5' : parsed.baseSpeed,
     speedWeaponBonus: isSoulSword ? '3' : parsed.bonusValue,
-    damageSmallMedium: isSoulSword ? '3d8' : parsed.smDamage,
-    damageLarge: isSoulSword ? '3d8' : parsed.lDamage,
+    damageSmallMedium: shouldReplaceDamage ? (isSoulSword ? '3d8' : defaults.damageSmallMedium) : row.damageSmallMedium,
+    damageLarge: shouldReplaceDamage ? (isSoulSword ? '3d8' : defaults.damageLarge) : row.damageLarge,
     damageWeaponBonus: isSoulSword ? '3' : parsed.bonusValue,
   };
 
@@ -330,6 +363,8 @@ export const updateWeaponRowField = (
       || field === 'damageStrengthBonus'
       || field === 'thacoWeaponBonus'
       || field === 'damageWeaponBonus'
+      || field === 'damageSmallMedium'
+      || field === 'damageLarge'
     )
   ) {
     return enrichWeaponRow(updatedRow, context);
@@ -346,8 +381,6 @@ export const WEAPON_DERIVED_READONLY_FIELDS: Array<keyof WeaponRow> = [
   'speedBase',
   'speedWeaponBonus',
   'speedReal',
-  'damageSmallMedium',
-  'damageLarge',
   'damageWeaponBonus',
   'damageSpecialization',
   'damageReal',

@@ -15,20 +15,28 @@ const NavDrawer = () => {
   const selectedCharacter = useSelectedCharacter();
   const [damageAmount, setDamageAmount] = useState('');
   const [healAmount, setHealAmount] = useState('');
+  const [activeAction, setActiveAction] = useState<'damage' | 'heal' | 'rest' | ''>('');
 
-  const handleLogout = async () => {
-    clearSessionCharacterState();
-
-    try {
-      await logout();
-    } catch {
-      // Route away even if Firebase is unavailable in the current environment.
-    }
-    router.push('/login');
+  const flashAction = (action: 'damage' | 'heal' | 'rest') => {
+    setActiveAction(action);
+    window.setTimeout(() => setActiveAction((current) => (current === action ? '' : current)), 700);
   };
 
-  const handleRest = () => {
-    restSelectedCharacter();
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('[logout] Firebase signOut failed', error);
+      return;
+    }
+
+    clearSessionCharacterState();
+    await router.replace('/login');
+  };
+
+  const handleRest = async () => {
+    flashAction('rest');
+    await restSelectedCharacter();
   };
 
   const parseAmount = (value: string) => {
@@ -36,22 +44,55 @@ const NavDrawer = () => {
     return Number.isFinite(parsed) ? parsed : 0;
   };
 
-  const handleDamage = () => {
-    damageSelectedCharacter(parseAmount(damageAmount));
+  const handleDamage = async () => {
+    const amount = parseAmount(damageAmount);
+    if (amount <= 0) return;
+
+    flashAction('damage');
+    await damageSelectedCharacter(amount);
     setDamageAmount('');
   };
 
-  const handleHeal = () => {
-    healSelectedCharacter(parseAmount(healAmount));
+  const handleHeal = async () => {
+    const amount = parseAmount(healAmount);
+    if (amount <= 0) return;
+
+    flashAction('heal');
+    await healSelectedCharacter(amount);
     setHealAmount('');
   };
 
   const updateDamageAmount = (event: ChangeEvent<HTMLInputElement>) => {
-    setDamageAmount(event.target.value);
+    const rawValue = event.target.value;
+
+    if (!rawValue.trim()) {
+      setDamageAmount('');
+      return;
+    }
+
+    const parsed = Number(rawValue);
+    setDamageAmount(Number.isFinite(parsed) ? String(Math.max(0, parsed)) : rawValue);
   };
 
   const updateHealAmount = (event: ChangeEvent<HTMLInputElement>) => {
-    setHealAmount(event.target.value);
+    const maxHitPoints = selectedCharacter?.maxHitPoints ?? selectedCharacter?.hitPoints ?? 0;
+    const currentHitPoints = selectedCharacter?.hitPoints ?? 0;
+    const missingHitPoints = Math.max(0, maxHitPoints - currentHitPoints);
+    const rawValue = event.target.value;
+
+    if (!rawValue.trim()) {
+      setHealAmount('');
+      return;
+    }
+
+    const parsed = Number(rawValue);
+
+    if (!Number.isFinite(parsed)) {
+      setHealAmount(rawValue);
+      return;
+    }
+
+    setHealAmount(String(Math.min(Math.max(0, parsed), missingHitPoints)));
   };
 
   return (
@@ -83,19 +124,20 @@ const NavDrawer = () => {
                   style={styles.resourceInput}
                   value={damageAmount}
                 />
-                <button type="button" onClick={handleDamage} style={styles.damageButton}>
-                  Damage
+                <button type="button" onClick={handleDamage} style={activeAction === 'damage' ? styles.activeDamageButton : styles.damageButton}>
+                  {activeAction === 'damage' ? 'Damaged' : 'Damage'}
                 </button>
                 <input
                   aria-label="Healing amount"
                   inputMode="numeric"
                   onChange={updateHealAmount}
+                  pattern="[0-9]*"
                   placeholder="Heal"
                   style={styles.resourceInput}
                   value={healAmount}
                 />
-                <button type="button" onClick={handleHeal} style={styles.healButton}>
-                  Heal
+                <button type="button" onClick={handleHeal} style={activeAction === 'heal' ? styles.activeHealButton : styles.healButton}>
+                  {activeAction === 'heal' ? 'Healed' : 'Heal'}
                 </button>
               </div>
             </div>
@@ -107,8 +149,8 @@ const NavDrawer = () => {
                 </strong>
               </div>
             </div>
-            <button type="button" onClick={handleRest} style={styles.restButton}>
-              Rest
+            <button type="button" onClick={handleRest} style={activeAction === 'rest' ? styles.activeRestButton : styles.restButton}>
+              {activeAction === 'rest' ? 'Rested' : 'Rest'}
             </button>
           </>
         )}
@@ -225,6 +267,17 @@ const styles: Record<string, React.CSSProperties> = {
     minHeight: 30,
     padding: '0 8px',
   },
+  activeDamageButton: {
+    border: '1px solid rgba(254,202,202,0.9)',
+    borderRadius: 6,
+    background: 'rgba(185,28,28,0.72)',
+    boxShadow: '0 0 0 2px rgba(248,113,113,0.22)',
+    color: '#fff',
+    cursor: 'pointer',
+    fontWeight: 900,
+    minHeight: 30,
+    padding: '0 8px',
+  },
   healButton: {
     border: '1px solid rgba(74,222,128,0.42)',
     borderRadius: 6,
@@ -235,6 +288,17 @@ const styles: Record<string, React.CSSProperties> = {
     minHeight: 30,
     padding: '0 8px',
   },
+  activeHealButton: {
+    border: '1px solid rgba(187,247,208,0.9)',
+    borderRadius: 6,
+    background: 'rgba(21,128,61,0.72)',
+    boxShadow: '0 0 0 2px rgba(74,222,128,0.2)',
+    color: '#fff',
+    cursor: 'pointer',
+    fontWeight: 900,
+    minHeight: 30,
+    padding: '0 8px',
+  },
   restButton: {
     border: '1px solid rgba(74,222,128,0.42)',
     borderRadius: 6,
@@ -242,6 +306,17 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#bbf7d0',
     cursor: 'pointer',
     fontWeight: 800,
+    minHeight: 38,
+    padding: '0 12px',
+  },
+  activeRestButton: {
+    border: '1px solid rgba(187,247,208,0.9)',
+    borderRadius: 6,
+    background: 'rgba(21,128,61,0.72)',
+    boxShadow: '0 0 0 2px rgba(74,222,128,0.2)',
+    color: '#fff',
+    cursor: 'pointer',
+    fontWeight: 900,
     minHeight: 38,
     padding: '0 12px',
   },

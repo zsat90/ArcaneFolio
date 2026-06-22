@@ -28,6 +28,7 @@ import {
   calculateSheetMagicPoints,
   getCharacterSheet,
 } from './characterSheetState';
+import { parseLevelTitle } from './experience';
 import { parseHitPointValue } from './hitPoints';
 
 const SELECTED_CHARACTER_KEY = 'arcane:selected-character-id';
@@ -131,6 +132,32 @@ const getResourceDefaults = (character: Character): CharacterResources => {
   };
 };
 
+const getCalculatedCharacterResources = (character: Character): CharacterResources => {
+  const normalizedCharacter = normalizeCharacter(character);
+  const runtime = getCachedRuntimeState(normalizedCharacter.id);
+  const sheet = getCharacterSheet(normalizedCharacter.id);
+  const level = parseLevelTitle(sheet.levelTitle || String(normalizedCharacter.level || 1));
+  const maxMagicPoints = calculateSheetMagicPoints(
+    normalizedCharacter.characterClass || normalizedCharacter.class || '',
+    level,
+    sheet,
+  );
+  const hitPointValues = getSheetHitPointValues(normalizedCharacter.id, normalizedCharacter);
+  const currentMagicPoints = runtime
+    ? runtime.currentMp
+    : normalizedCharacter.magicPoints ?? maxMagicPoints;
+  const currentHitPoints = runtime
+    ? runtime.currentHp
+    : hitPointValues.hitPoints;
+
+  return {
+    magicPoints: Math.min(Math.max(0, currentMagicPoints), maxMagicPoints),
+    maxMagicPoints,
+    hitPoints: Math.min(Math.max(0, currentHitPoints), hitPointValues.maxHitPoints),
+    maxHitPoints: hitPointValues.maxHitPoints,
+  };
+};
+
 const mergeResources = (character: Character, resources?: Partial<CharacterResources>): CharacterResources => {
   const defaults = getResourceDefaults(character);
 
@@ -188,7 +215,7 @@ export const setSelectedCharacter = (character: Character) => {
     let runtime = getCachedRuntimeState(normalizedCharacter.id);
 
     if (!runtime) {
-      const defaults = getResourceDefaults(normalizedCharacter);
+      const defaults = getCalculatedCharacterResources(normalizedCharacter);
       await updateRuntimeState(normalizedCharacter, defaults);
     }
 
@@ -329,17 +356,24 @@ const mergeCharacterWithRuntime = (character: Character): Character => {
   const normalizedCharacter = normalizeCharacter(character);
   const runtime = getCachedRuntimeState(normalizedCharacter.id);
   const sheet = getCharacterSheet(normalizedCharacter.id);
+  const level = parseLevelTitle(sheet.levelTitle || String(normalizedCharacter.level || 1));
   const sheetMagicPoints = calculateSheetMagicPoints(
     normalizedCharacter.characterClass || normalizedCharacter.class || '',
-    normalizedCharacter.level || 1,
+    level,
     sheet,
   );
 
   if (!runtime) {
-    return normalizedCharacter;
+    const maxMagicPoints = sheetMagicPoints;
+
+    return {
+      ...normalizedCharacter,
+      magicPoints: Math.min(normalizedCharacter.magicPoints ?? maxMagicPoints, maxMagicPoints),
+      maxMagicPoints,
+    };
   }
 
-  const maxMagicPoints = runtime.maxMp || sheetMagicPoints;
+  const maxMagicPoints = sheetMagicPoints;
   const magicPoints = Math.min(runtime.currentMp, maxMagicPoints);
   const maxHitPoints = runtime.maxHp || normalizedCharacter.maxHitPoints || 0;
   const hitPoints = Math.min(runtime.currentHp, maxHitPoints);
@@ -367,11 +401,14 @@ export const syncMagicPointsFromSheet = async (characterId: number, characterCla
       }
     : hitPointValues;
 
+  const currentMagicPoints = runtime ? runtime.currentMp : maxMagicPoints;
+  const nextCurrentMagicPoints = Math.min(Math.max(0, currentMagicPoints), maxMagicPoints);
+  const currentHitPoints = runtime ? runtime.currentHp : hitPointValues.hitPoints;
   const next = {
-    magicPoints: maxMagicPoints,
+    magicPoints: nextCurrentMagicPoints,
     maxMagicPoints,
-    hitPoints: current.hitPoints,
-    maxHitPoints: current.maxHitPoints,
+    hitPoints: Math.min(Math.max(0, currentHitPoints), hitPointValues.maxHitPoints),
+    maxHitPoints: hitPointValues.maxHitPoints,
   };
 
   await updateRuntimeState({ id: characterId, name: '', class: characterClass }, next);
@@ -387,13 +424,7 @@ const withSelectedCharacterUpdate = async (
     return null;
   }
 
-  const runtime = getCachedRuntimeState(character.id);
-  const current = mergeResources(character, runtime ? {
-    magicPoints: runtime.currentMp,
-    maxMagicPoints: runtime.maxMp,
-    hitPoints: runtime.currentHp,
-    maxHitPoints: runtime.maxHp,
-  } : undefined);
+  const current = getCalculatedCharacterResources(character);
   const next = updater(character, current);
 
   await updateRuntimeState(character, next);
@@ -424,8 +455,7 @@ export const resetMagicPoints = () => {
 
   void withSelectedCharacterUpdate((_character, current) => ({
     ...current,
-    magicPoints: character.maxMagicPoints ?? character.magicPoints ?? 0,
-    maxMagicPoints: character.maxMagicPoints ?? character.magicPoints ?? 0,
+    magicPoints: current.maxMagicPoints,
   }));
 
   return getSelectedCharacterSnapshot();
@@ -458,12 +488,10 @@ export const damageSelectedCharacter = (amount: number) => {
     return getSelectedCharacterSnapshot();
   }
 
-  void withSelectedCharacterUpdate((_character, current) => ({
+  return withSelectedCharacterUpdate((_character, current) => ({
     ...current,
     hitPoints: Math.max(0, current.hitPoints - amount),
   }));
-
-  return getSelectedCharacterSnapshot();
 };
 
 export const healSelectedCharacter = (amount: number) => {
@@ -471,12 +499,10 @@ export const healSelectedCharacter = (amount: number) => {
     return getSelectedCharacterSnapshot();
   }
 
-  void withSelectedCharacterUpdate((_character, current) => ({
+  return withSelectedCharacterUpdate((_character, current) => ({
     ...current,
     hitPoints: Math.min(current.maxHitPoints, current.hitPoints + amount),
   }));
-
-  return getSelectedCharacterSnapshot();
 };
 
 export const restSelectedCharacter = () => {
@@ -486,16 +512,10 @@ export const restSelectedCharacter = () => {
     return null;
   }
 
-  const levelHealing = Math.max(0, character.level ?? 0);
-
-  void withSelectedCharacterUpdate((_character, current) => ({
+  return withSelectedCharacterUpdate((_character, current) => ({
     ...current,
-    magicPoints: character.maxMagicPoints ?? character.magicPoints ?? 0,
-    maxMagicPoints: character.maxMagicPoints ?? character.magicPoints ?? 0,
-    hitPoints: Math.min(current.maxHitPoints, current.hitPoints + levelHealing),
+    magicPoints: current.maxMagicPoints,
   }));
-
-  return getSelectedCharacterSnapshot();
 };
 
 export const getSpellbookIds = (characterId?: number) => {

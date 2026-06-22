@@ -802,19 +802,23 @@ const PRIEST_MP_ADJUSTMENTS: Record<number, number> = {
   25: 11,
 };
 
-const MAGE_MP_CLASSES = ['Wizard', 'Druid', 'Runeist'];
-
 export const calculateSheetMagicPoints = (characterClass: string, level: number, sheet: CharacterSheetState) => {
   const boundedLevel = Math.max(level || 1, 1);
   const intelligence = Number(sheet.abilityDetails.Intelligence);
   const piety = Number(sheet.abilityDetails.Piety);
 
-  if (MAGE_MP_CLASSES.includes(characterClass)) {
-    return Math.max(0, (boundedLevel * 4) + (MAGE_MP_ADJUSTMENTS[intelligence] ?? 0));
+  // Wizard and Runeist use Intelligence for MP. The ability bonus applies once per level.
+  if (characterClass === 'Wizard' || characterClass === 'Runeist') {
+    return Math.max(0, (4 + (MAGE_MP_ADJUSTMENTS[intelligence] ?? 0)) * boundedLevel);
   }
 
+  // Priest uses Piety for MP. The ability bonus applies once per level.
   if (characterClass === 'Priest') {
-    return Math.max(0, (boundedLevel * 4) + (PRIEST_MP_ADJUSTMENTS[piety] ?? 0));
+    return Math.max(0, (4 + (PRIEST_MP_ADJUSTMENTS[piety] ?? 0)) * boundedLevel);
+  }
+
+  if (characterClass === 'Druid') {
+    return Math.max(0, (boundedLevel * 4) + (MAGE_MP_ADJUSTMENTS[intelligence] ?? 0));
   }
 
   return 0;

@@ -394,6 +394,7 @@ const EQUIPMENT_ITEMS: Record<string, EquipmentItem[]> = {
     { name: 'Chain mail', cost: '75 gp', weight: '40 lbs.' },
     { name: 'Elven Chain', cost: '4,000 gp', weight: '15 lbs.', notes: 'Rare armor' },
     { name: 'Field plate', cost: '2,000 gp', weight: '60 lbs.' },
+    { name: 'Rigid Leather - Vanar/Sindar Armor', cost: '', weight: '20 lbs.', notes: 'Vanar/Sindar only; ask DM for magical bonus' },
     { name: 'Full plate', cost: '6,500 gp', weight: '70 lbs.' },
     { name: 'Hide', cost: '15 gp', weight: '30 lbs.' },
     { name: 'Leather', cost: '5 gp', weight: '15 lbs.' },

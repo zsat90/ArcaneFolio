@@ -2,8 +2,9 @@ import React, { ChangeEvent, useEffect, useRef, useState } from 'react';
 import EquipmentListModal from '../../components/Equipment/EquipmentListModal';
 import ImageBackgroundWrapper from '../../components/imageBackground';
 import NavDrawer from '../../components/Navigation/navDrawer';
-import { useSelectedCharacter } from '../../utils/character/characterState';
+import { syncMagicPointsFromSheet, useSelectedCharacter } from '../../utils/character/characterState';
 import {
+  calculateSheetMagicPoints,
   CharacterSheetState,
   NonWeaponProficiencyRow,
   ProficiencyRow,
@@ -33,6 +34,7 @@ import {
   parseCoinEntry,
 } from '../../utils/character/partyTreasure';
 import EquipmentItemRow from '../../components/CharacterSheet/EquipmentItemRow';
+import DeitySelectOptions from '../../components/CharacterSheet/DeitySelectOptions';
 import RaceSelectOptions from '../../components/CharacterSheet/RaceSelectOptions';
 import { getEquipmentLinesForCategory, withSelectedEquipmentOption } from '../../utils/character/equipment';
 import { removeLineFromBucket, syncSheetAfterEquipmentRemoval } from '../../utils/character/equipmentRemoval';
@@ -54,6 +56,7 @@ import {
   getWeaponEquipmentLines,
   getWeaponFieldDisplayValue,
   getWeaponRowContext,
+  hasCustomWeaponDamageValues,
   isSoulSwordLine,
   SOUL_SWORD_COLORS,
   updateWeaponRowField,
@@ -400,6 +403,7 @@ export default function CharacterSheetPage() {
   const [partyCoinEntries, setPartyCoinEntries] = useState<Record<string, string>>({});
   const [levelUpModal, setLevelUpModal] = useState<LevelUpModalState>(DEFAULT_LEVEL_UP_MODAL_STATE);
   const [attentionKeys, setAttentionKeys] = useState<LevelUpAttentionKey[]>([]);
+  const [updateButtonState, setUpdateButtonState] = useState<'idle' | 'updated'>('idle');
   const processedAutoLevelKeys = useRef(new Set<string>());
   const sheetHydratedForKey = useRef('');
 
@@ -440,6 +444,17 @@ export default function CharacterSheetPage() {
   const clearAllAttention = () => {
     setAttentionKeys([]);
     setSaveState('Saved');
+  };
+  const updateCharacterNow = () => {
+    if (!sheetKey) {
+      return;
+    }
+
+    setCharacterSheet(Number(sheetKey), sheet);
+    void syncMagicPointsFromSheet(Number(sheetKey), characterClass, parseLevelTitle(sheet.levelTitle || characterLevel));
+    setSaveState('Saved');
+    setUpdateButtonState('updated');
+    window.setTimeout(() => setUpdateButtonState('idle'), 900);
   };
 
   const createLevelUpModalState = (
@@ -516,6 +531,8 @@ export default function CharacterSheetPage() {
         loadedSheet.abilityDetails.Dexterity,
         characterClass,
       );
+      const levelValue = parseLevelTitle(loadedSheet.levelTitle || characterLevel);
+      const recalculatedMagicPoints = calculateSheetMagicPoints(characterClass, levelValue, loadedSheet);
 
       setSheet({
         ...loadedSheet,
@@ -530,6 +547,10 @@ export default function CharacterSheetPage() {
           ...(hasClassXpBonusRule(characterClass)
             ? { Bonus: getClassXpBonusFieldValue(characterClass, loadedSheet.abilityDetails) }
             : {}),
+        },
+        combatDetails: {
+          ...loadedSheet.combatDetails,
+          MP: String(recalculatedMagicPoints),
         },
       });
       sheetHydratedForKey.current = sheetKey;
@@ -546,8 +567,9 @@ export default function CharacterSheetPage() {
     }
 
     setCharacterSheet(Number(sheetKey), sheet);
+    void syncMagicPointsFromSheet(Number(sheetKey), characterClass, parseLevelTitle(sheet.levelTitle || characterLevel));
     setSaveState('Saved');
-  }, [sheet, sheetKey]);
+  }, [characterClass, characterLevel, sheet, sheetKey]);
 
   useEffect(() => {
     if (
@@ -686,6 +708,19 @@ export default function CharacterSheetPage() {
     }
 
     if (section === 'hitPointDetails') {
+      if (field === 'Total HP') {
+        setSheet((currentSheet) => ({
+          ...currentSheet,
+          hitPointDetails: {
+            ...currentSheet.hitPointDetails,
+            'Total HP': value,
+            'Level Up HP Base': '',
+          },
+        }));
+
+        return;
+      }
+
       setSheet((currentSheet) => ({
         ...currentSheet,
         hitPointDetails: withLevelAwareTotalHitPoints(
@@ -769,16 +804,20 @@ export default function CharacterSheetPage() {
       return;
     }
 
-    if (section === 'abilityDetails' && field === 'Intelligence') {
+    if (section === 'abilityDetails' && (field === 'Intelligence' || field === 'Piety')) {
       setSheet((currentSheet) => {
         const abilityDetails = {
           ...currentSheet.abilityDetails,
-          Intelligence: value,
+          [field]: value,
         };
 
         return {
           ...currentSheet,
           abilityDetails,
+          combatDetails: {
+            ...currentSheet.combatDetails,
+            MP: String(calculateSheetMagicPoints(characterClass, parseLevelTitle(currentSheet.levelTitle || characterLevel), { ...currentSheet, abilityDetails })),
+          },
           ...(hasClassXpBonusRule(characterClass)
             ? {
                 experienceDetails: {
@@ -917,7 +956,16 @@ export default function CharacterSheetPage() {
       weaponRows: currentSheet.weaponRows.map((row, index) => (
         index === rowIndex
           ? {
-            ...applyWeaponSelectionToRow(row, value, getWeaponRowContext(currentSheet, characterClass)),
+            ...applyWeaponSelectionToRow(
+              row,
+              value,
+              getWeaponRowContext(currentSheet, characterClass),
+              {
+                replaceCustomDamage: hasCustomWeaponDamageValues(row)
+                  ? window.confirm('This weapon has custom damage values. Replace them with the new weapon defaults?\n\nOK = Replace\nCancel = Keep Current Values')
+                  : false,
+              },
+            ),
             soulSwordColor: selectedSoulSword ? '' : '',
             soulSwordIgnited: false,
           }
@@ -1162,11 +1210,17 @@ export default function CharacterSheetPage() {
           <div>
             <h1 style={{ ...styles.title, ...(isTabletViewport ? { fontSize: 32 } : {}) }}>Character Sheet</h1>
           </div>
-          {attentionKeys.length > 0 && (
-            <button onClick={clearAllAttention} style={styles.reviewSaveButton} type="button">
-              Save Review
+          <div style={styles.headerActions}>
+            {attentionKeys.length > 0 && (
+              <button onClick={clearAllAttention} style={styles.reviewSaveButton} type="button">
+                Save Review
+              </button>
+            )}
+            <button onClick={updateCharacterNow} style={updateButtonState === 'updated' ? styles.activeReviewSaveButton : styles.reviewSaveButton} type="button">
+              {updateButtonState === 'updated' ? 'Updated' : 'Update Character'}
             </button>
-          )}
+            <span style={styles.savedPill}>{saveState}</span>
+          </div>
         </div>
 
         <section style={{ ...styles.sheet, ...(isTabletViewport ? { gap: 14, padding: 16 } : {}) }}>
@@ -1211,7 +1265,13 @@ export default function CharacterSheetPage() {
                   </select>
                 </label>
                 <label style={styles.lineField}><span style={styles.lineLabel}>Alignment:</span><input value={sheet.alignment} onChange={updateSheetField('alignment')} style={styles.lineInput} /></label>
-                <label style={styles.lineField}><span style={styles.lineLabel}>Deity:</span><input value={sheet.deity} onChange={updateSheetField('deity')} style={styles.lineInput} /></label>
+                <label style={styles.lineField}>
+                  <span style={styles.lineLabel}>Deity:</span>
+                  <select value={sheet.deity} onChange={updateSheetField('deity')} style={styles.lineInput}>
+                    <option value="">Select deity</option>
+                    <DeitySelectOptions />
+                  </select>
+                </label>
                 <label style={styles.lineField}>
                   <span style={styles.lineLabel}>Level/Title:</span>
                   <select value={String(Math.min(parseLevelTitle(sheet.levelTitle || characterLevel), maxClassLevel))} onChange={updateSheetField('levelTitle')} style={styles.lineInput}>
@@ -1395,7 +1455,6 @@ export default function CharacterSheetPage() {
                         <input
                           value={sheet.hitPointDetails[field]}
                           onChange={updateSheetRecordField('hitPointDetails', field)}
-                          readOnly={field === 'Total HP'}
                           style={withAttentionStyle(
                             styles.lineInput,
                             field === 'Total HP' ? 'hitPoints.total' : 'hitPoints.hpRoll',
@@ -2113,6 +2172,18 @@ const styles: Record<string, React.CSSProperties> = {
     border: '1px solid rgba(74,222,128,0.46)',
     borderRadius: 4,
     color: '#dcfce7',
+    cursor: 'pointer',
+    fontSize: 13,
+    fontWeight: 900,
+    minHeight: 30,
+    padding: '0 12px',
+  },
+  activeReviewSaveButton: {
+    background: 'rgba(21,128,61,0.78)',
+    border: '1px solid rgba(187,247,208,0.9)',
+    borderRadius: 4,
+    boxShadow: '0 0 0 2px rgba(74,222,128,0.2)',
+    color: '#fff',
     cursor: 'pointer',
     fontSize: 13,
     fontWeight: 900,

@@ -7,8 +7,17 @@ export const SPELLBOOK_UNAVAILABLE_MESSAGE = 'This class cannot use a spellbook.
 export const SPELL_ADD_UNAVAILABLE_MESSAGE = 'This class cannot add spells.';
 export const SPELL_LEARN_DENIED_MESSAGE = 'This character class cannot learn this spell.';
 
-export const getAllowedSpellType = (characterClass: string): AllowedSpellType | null => {
+export const getAllowedSpellType = (characterClass: string, level?: number): AllowedSpellType | null => {
   const trimmedClass = characterClass.trim();
+  const classLevel = Number.isFinite(level) ? Number(level) : null;
+
+  if (trimmedClass === 'Ranger' && classLevel !== null && classLevel < 8) {
+    return null;
+  }
+
+  if (trimmedClass === 'Paladin' && classLevel !== null && classLevel < 9) {
+    return null;
+  }
 
   if ((PRIEST_SPELL_CLASSES as readonly string[]).includes(trimmedClass)) {
     return 'priest';
@@ -21,9 +30,9 @@ export const getAllowedSpellType = (characterClass: string): AllowedSpellType | 
   return null;
 };
 
-export const canUseSpellbook = (characterClass: string) => getAllowedSpellType(characterClass) !== null;
+export const canUseSpellbook = (characterClass: string, level?: number) => getAllowedSpellType(characterClass, level) !== null;
 
-export const canAddSpells = (characterClass: string) => getAllowedSpellType(characterClass) !== null;
+export const canAddSpells = (characterClass: string, level?: number) => getAllowedSpellType(characterClass, level) !== null;
 
 export const normalizeSpellType = (spellType: string): AllowedSpellType | null => {
   const normalized = spellType.trim().toLowerCase();

@@ -8,7 +8,7 @@ import {
   handlePasswordChange,
   handlePasswordMatch,
 } from '../utils/LoginAuth';
-import { getAuthErrorMessage, signInWithGoogle, signup } from '../utils/auth/authService';
+import { getAuthErrorMessage, signup } from '../utils/auth/authService';
 import globalStyles from '../styles/styles';
 import wizard from '../assets/images/wizard.webp';
 import ImageBackgroundWrapper from '../components/imageBackground';
@@ -50,23 +50,6 @@ export default function CreateAccountPage() {
     }
   };
 
-  const submitGoogleLogin = async () => {
-    setFormError('');
-    setIsSubmitting(true);
-
-    try {
-      const signInMode = await signInWithGoogle();
-
-      if (signInMode === 'popup') {
-        router.push('/characters');
-      }
-    } catch (error) {
-      setFormError(getAuthErrorMessage(error));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
     <ImageBackgroundWrapper>
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
@@ -89,17 +72,6 @@ export default function CreateAccountPage() {
           <div style={{ width: '100%', marginTop: 24 }}>
             <Buttons type="submit" mode="contained" disabled={isSubmitting} style={{ width: '100%' }}>
               {isSubmitting ? 'Creating account...' : 'Create your account'}
-            </Buttons>
-          </div>
-
-          <div style={{ width: '100%', marginTop: 12 }}>
-            <Buttons
-              mode="outlined"
-              onPress={submitGoogleLogin}
-              disabled={isSubmitting}
-              style={{ width: '100%', backgroundColor: '#4285F4', color: '#fff', borderColor: '#4285F4' }}
-            >
-              Continue with Google
             </Buttons>
           </div>
 

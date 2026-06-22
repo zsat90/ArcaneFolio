@@ -14,6 +14,14 @@ export const characterStateDocPath = (uid: string, characterId: number) => (
   `${characterDocPath(uid, characterId)}/state/main`
 );
 
+export const npcDocPath = (uid: string, npcId: string) => (
+  `users/${uid}/npcs/${npcId}`
+);
+
+export const npcSpellbookDocPath = (uid: string, npcId: string) => (
+  `${npcDocPath(uid, npcId)}/spellbook/main`
+);
+
 /** @deprecated Legacy top-level collection used before Phase 3 */
 export const legacyCharacterDocPath = (uid: string, characterId: number) => (
   `characters/${uid}_${characterId}`

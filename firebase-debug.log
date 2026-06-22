@@ -1,0 +1,154 @@
+[debug] [2026-06-20T16:52:34.872Z] ----------------------------------------------------------------------
+[debug] [2026-06-20T16:52:34.873Z] Command:       /usr/local/bin/node /Users/zakerysattler/.npm/_npx/7750544ccf494d8b/node_modules/.bin/firebase deploy --only firestore:rules --project arcane-folio
+[debug] [2026-06-20T16:52:34.873Z] CLI Version:   15.22.0
+[debug] [2026-06-20T16:52:34.873Z] Platform:      darwin
+[debug] [2026-06-20T16:52:34.873Z] Node Version:  v20.15.1
+[debug] [2026-06-20T16:52:34.873Z] Detected Agent: codex_cli
+[debug] [2026-06-20T16:52:34.873Z] Time:          Sat Jun 20 2026 12:52:34 GMT-0400 (Eastern Daylight Time)
+[debug] [2026-06-20T16:52:34.873Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-06-20T16:52:34.874Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-06-20T16:52:35.540Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-06-20T16:52:35.540Z] > authorizing via signed-in user (zakerysattler@gmail.com)
+[debug] [2026-06-20T16:52:35.540Z] [iam] checking project arcane-folio for permissions ["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]
+[debug] [2026-06-20T16:52:35.541Z] Checked if tokens are valid: false, expires at: 1781880349908
+[debug] [2026-06-20T16:52:35.541Z] Checked if tokens are valid: false, expires at: 1781880349908
+[debug] [2026-06-20T16:52:35.541Z] > refreshing access token with scopes: []
+[debug] [2026-06-20T16:52:35.542Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-06-20T16:52:35.542Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-06-20T16:52:35.723Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-06-20T16:52:35.724Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-06-20T16:52:35.733Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/arcane-folio:testIamPermissions [none]
+[debug] [2026-06-20T16:52:35.733Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/arcane-folio:testIamPermissions  x-goog-user-project=arcane-folio
+[debug] [2026-06-20T16:52:35.733Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/arcane-folio:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[debug] [2026-06-20T16:52:35.747Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 200
+[debug] [2026-06-20T16:52:35.747Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json {"cloudBuildErrorAfter":1594252800000,"cloudBuildWarnAfter":1590019200000,"defaultNode10After":1594252800000,"minVersion":"3.0.5","node8DeploysDisabledAfter":1613390400000,"node8RuntimeDisabledAfter":1615809600000,"node8WarnAfter":1600128000000}
+[debug] [2026-06-20T16:52:36.015Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/arcane-folio:testIamPermissions 200
+[debug] [2026-06-20T16:52:36.016Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/arcane-folio:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[info] 
+[info] === Deploying to 'arcane-folio'...
+[info] 
+[info] i  deploying firestore 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[debug] [2026-06-20T16:52:36.019Z] Checked if tokens are valid: true, expires at: 1781977954724
+[debug] [2026-06-20T16:52:36.019Z] Checked if tokens are valid: true, expires at: 1781977954724
+[debug] [2026-06-20T16:52:36.019Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/arcane-folio/databases/(default) [none]
+[debug] [2026-06-20T16:52:36.427Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/arcane-folio/databases/(default) 200
+[debug] [2026-06-20T16:52:36.427Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/arcane-folio/databases/(default) {"name":"projects/arcane-folio/databases/(default)","uid":"286f57f6-5ef7-4136-bc65-8f9ab0818488","createTime":"2026-06-19T13:23:32.568724Z","updateTime":"2026-06-19T13:23:32.568724Z","locationId":"nam5","type":"FIRESTORE_NATIVE","concurrencyMode":"PESSIMISTIC","versionRetentionPeriod":"3600s","earliestVersionTime":"2026-06-20T15:52:36.469159Z","appEngineIntegrationMode":"DISABLED","keyPrefix":"s","pointInTimeRecoveryEnablement":"POINT_IN_TIME_RECOVERY_DISABLED","deleteProtectionState":"DELETE_PROTECTION_DISABLED","databaseEdition":"STANDARD","freeTier":true,"realtimeUpdatesMode":"REALTIME_UPDATES_MODE_ENABLED","etag":"IMzGkOSjlpUDMPXxlpuzk5UD"}
+[info] i  cloud.firestore: checking firestore.rules for compilation errors... 
+[debug] [2026-06-20T16:52:36.428Z] Checked if tokens are valid: true, expires at: 1781977954724
+[debug] [2026-06-20T16:52:36.428Z] Checked if tokens are valid: true, expires at: 1781977954724
+[debug] [2026-06-20T16:52:36.429Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/arcane-folio:test [none]
+[debug] [2026-06-20T16:52:36.429Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/arcane-folio:test [omitted]
+[debug] [2026-06-20T16:52:36.725Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/arcane-folio:test 200
+[debug] [2026-06-20T16:52:36.726Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/arcane-folio:test {}
+[info] ✔  cloud.firestore: rules file firestore.rules compiled successfully 
+[debug] [2026-06-20T16:52:36.729Z] Checked if tokens are valid: true, expires at: 1781977954724
+[debug] [2026-06-20T16:52:36.729Z] Checked if tokens are valid: true, expires at: 1781977954724
+[debug] [2026-06-20T16:52:36.730Z] >>> [apiv2][query] GET https://firebaserules.googleapis.com/v1/projects/arcane-folio/releases pageSize=10&pageToken=
+[debug] [2026-06-20T16:52:36.857Z] <<< [apiv2][status] GET https://firebaserules.googleapis.com/v1/projects/arcane-folio/releases 200
+[debug] [2026-06-20T16:52:36.857Z] <<< [apiv2][body] GET https://firebaserules.googleapis.com/v1/projects/arcane-folio/releases {"releases":[{"name":"projects/arcane-folio/releases/cloud.firestore","rulesetName":"projects/arcane-folio/rulesets/8eb54cbb-ee1a-49c7-876c-9b2f5775cbe6","createTime":"2026-06-19T13:23:33.798429Z","updateTime":"2026-06-19T13:48:59.331907Z"}]}
+[debug] [2026-06-20T16:52:36.857Z] Checked if tokens are valid: true, expires at: 1781977954724
+[debug] [2026-06-20T16:52:36.857Z] Checked if tokens are valid: true, expires at: 1781977954724
+[debug] [2026-06-20T16:52:36.858Z] >>> [apiv2][query] GET https://firebaserules.googleapis.com/v1/projects/arcane-folio/rulesets/8eb54cbb-ee1a-49c7-876c-9b2f5775cbe6 [none]
+[debug] [2026-06-20T16:52:37.000Z] <<< [apiv2][status] GET https://firebaserules.googleapis.com/v1/projects/arcane-folio/rulesets/8eb54cbb-ee1a-49c7-876c-9b2f5775cbe6 200
+[debug] [2026-06-20T16:52:37.000Z] <<< [apiv2][body] GET https://firebaserules.googleapis.com/v1/projects/arcane-folio/rulesets/8eb54cbb-ee1a-49c7-876c-9b2f5775cbe6 [omitted]
+[info] i  firestore: uploading rules firestore.rules... 
+[debug] [2026-06-20T16:52:37.001Z] Checked if tokens are valid: true, expires at: 1781977954724
+[debug] [2026-06-20T16:52:37.001Z] Checked if tokens are valid: true, expires at: 1781977954724
+[debug] [2026-06-20T16:52:37.002Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/arcane-folio/rulesets [none]
+[debug] [2026-06-20T16:52:37.002Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/arcane-folio/rulesets [omitted]
+[debug] [2026-06-20T16:52:37.301Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/arcane-folio/rulesets 200
+[debug] [2026-06-20T16:52:37.302Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/arcane-folio/rulesets {"name":"projects/arcane-folio/rulesets/ecfb872c-524f-4474-b3bb-b7b118b33151","source":{"files":[{"content":"rules_version = '2';\n\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    function isSignedIn() {\n      return request.auth != null;\n    }\n\n    function isOwner(uid) {\n      return isSignedIn() && request.auth.uid == uid;\n    }\n\n    // Legacy top-level collection — migration read/delete only (not used by normal app flow)\n    match /characters/{characterId} {\n      allow read, delete: if isSignedIn()\n        && resource.data.ownerId == request.auth.uid;\n    }\n\n    match /users/{uid} {\n      allow read, create, update, delete: if isOwner(uid);\n\n      match /characters/{characterId} {\n        allow create: if isOwner(uid)\n          && request.resource.data.ownerId == uid;\n\n        allow read, delete: if isOwner(uid);\n\n        allow update: if isOwner(uid)\n          && request.resource.data.ownerId == uid\n          && (!('ownerId' in resource.data) || resource.data.ownerId == uid);\n\n        match /sheet/{docId} {\n          allow read, create, update, delete: if isOwner(uid);\n        }\n\n        match /spellbook/{docId} {\n          allow read, create, update, delete: if isOwner(uid);\n        }\n\n        match /state/{docId} {\n          allow read, create, update, delete: if isOwner(uid);\n        }\n      }\n\n      match /npcs/{npcId} {\n        allow create: if isOwner(uid)\n          && request.resource.data.ownerId == uid;\n\n        allow read, delete: if isOwner(uid);\n\n        allow update: if isOwner(uid)\n          && request.resource.data.ownerId == uid\n          && (!('ownerId' in resource.data) || resource.data.ownerId == uid);\n      }\n    }\n  }\n}\n","name":"firestore.rules"}]},"createTime":"2026-06-20T16:52:37.335375Z","metadata":{"services":["cloud.firestore"]}}
+[debug] [2026-06-20T16:52:37.302Z] [rules] created ruleset projects/arcane-folio/rulesets/ecfb872c-524f-4474-b3bb-b7b118b33151
+[debug] [2026-06-20T16:52:37.302Z] [rules] releasing cloud.firestore with ruleset projects/arcane-folio/rulesets/ecfb872c-524f-4474-b3bb-b7b118b33151
+[debug] [2026-06-20T16:52:37.302Z] Checked if tokens are valid: true, expires at: 1781977954724
+[debug] [2026-06-20T16:52:37.302Z] Checked if tokens are valid: true, expires at: 1781977954724
+[debug] [2026-06-20T16:52:37.303Z] >>> [apiv2][query] PATCH https://firebaserules.googleapis.com/v1/projects/arcane-folio/releases/cloud.firestore [none]
+[debug] [2026-06-20T16:52:37.303Z] >>> [apiv2][body] PATCH https://firebaserules.googleapis.com/v1/projects/arcane-folio/releases/cloud.firestore {"release":{"name":"projects/arcane-folio/releases/cloud.firestore","rulesetName":"projects/arcane-folio/rulesets/ecfb872c-524f-4474-b3bb-b7b118b33151"}}
+[debug] [2026-06-20T16:52:37.600Z] <<< [apiv2][status] PATCH https://firebaserules.googleapis.com/v1/projects/arcane-folio/releases/cloud.firestore 200
+[debug] [2026-06-20T16:52:37.600Z] <<< [apiv2][body] PATCH https://firebaserules.googleapis.com/v1/projects/arcane-folio/releases/cloud.firestore {"name":"projects/arcane-folio/releases/cloud.firestore","rulesetName":"projects/arcane-folio/rulesets/ecfb872c-524f-4474-b3bb-b7b118b33151","createTime":"2026-06-19T13:23:33.798429Z","updateTime":"2026-06-20T16:52:37.637854Z"}
+[debug] [2026-06-20T16:52:37.600Z] [rules] updated release projects/arcane-folio/releases/cloud.firestore
+[info] ✔  firestore: released rules firestore.rules to cloud.firestore 
+[info] 
+[info] ✔  Deploy complete! 
+[info] 
+[info] Project Console: https://console.firebase.google.com/project/arcane-folio/overview
+[debug] [2026-06-21T22:06:22.687Z] ----------------------------------------------------------------------
+[debug] [2026-06-21T22:06:22.689Z] Command:       /usr/local/bin/node /Users/zakerysattler/.npm/_npx/7750544ccf494d8b/node_modules/.bin/firebase deploy --only firestore:rules --project arcane-folio
+[debug] [2026-06-21T22:06:22.689Z] CLI Version:   15.22.0
+[debug] [2026-06-21T22:06:22.689Z] Platform:      darwin
+[debug] [2026-06-21T22:06:22.689Z] Node Version:  v20.15.1
+[debug] [2026-06-21T22:06:22.689Z] Detected Agent: codex_cli
+[debug] [2026-06-21T22:06:22.689Z] Time:          Sun Jun 21 2026 18:06:22 GMT-0400 (Eastern Daylight Time)
+[debug] [2026-06-21T22:06:22.689Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-06-21T22:06:22.690Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-06-21T22:06:23.420Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-06-21T22:06:23.420Z] > authorizing via signed-in user (zakerysattler@gmail.com)
+[debug] [2026-06-21T22:06:23.420Z] [iam] checking project arcane-folio for permissions ["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]
+[debug] [2026-06-21T22:06:23.421Z] Checked if tokens are valid: false, expires at: 1781977954724
+[debug] [2026-06-21T22:06:23.421Z] Checked if tokens are valid: false, expires at: 1781977954724
+[debug] [2026-06-21T22:06:23.421Z] > refreshing access token with scopes: []
+[debug] [2026-06-21T22:06:23.422Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-06-21T22:06:23.422Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-06-21T22:06:23.587Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-06-21T22:06:23.587Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-06-21T22:06:23.596Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/arcane-folio:testIamPermissions [none]
+[debug] [2026-06-21T22:06:23.596Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/arcane-folio:testIamPermissions  x-goog-user-project=arcane-folio
+[debug] [2026-06-21T22:06:23.596Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/arcane-folio:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[debug] [2026-06-21T22:06:23.642Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 200
+[debug] [2026-06-21T22:06:23.642Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json {"cloudBuildErrorAfter":1594252800000,"cloudBuildWarnAfter":1590019200000,"defaultNode10After":1594252800000,"minVersion":"3.0.5","node8DeploysDisabledAfter":1613390400000,"node8RuntimeDisabledAfter":1615809600000,"node8WarnAfter":1600128000000}
+[debug] [2026-06-21T22:06:23.871Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/arcane-folio:testIamPermissions 200
+[debug] [2026-06-21T22:06:23.872Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/arcane-folio:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[info] 
+[info] === Deploying to 'arcane-folio'...
+[info] 
+[info] i  deploying firestore 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[debug] [2026-06-21T22:06:23.879Z] Checked if tokens are valid: true, expires at: 1782083182587
+[debug] [2026-06-21T22:06:23.879Z] Checked if tokens are valid: true, expires at: 1782083182587
+[debug] [2026-06-21T22:06:23.879Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/arcane-folio/databases/(default) [none]
+[debug] [2026-06-21T22:06:24.287Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/arcane-folio/databases/(default) 200
+[debug] [2026-06-21T22:06:24.287Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/arcane-folio/databases/(default) {"name":"projects/arcane-folio/databases/(default)","uid":"286f57f6-5ef7-4136-bc65-8f9ab0818488","createTime":"2026-06-19T13:23:32.568724Z","updateTime":"2026-06-19T13:23:32.568724Z","locationId":"nam5","type":"FIRESTORE_NATIVE","concurrencyMode":"PESSIMISTIC","versionRetentionPeriod":"3600s","earliestVersionTime":"2026-06-21T21:06:24.266761Z","appEngineIntegrationMode":"DISABLED","keyPrefix":"s","pointInTimeRecoveryEnablement":"POINT_IN_TIME_RECOVERY_DISABLED","deleteProtectionState":"DELETE_PROTECTION_DISABLED","databaseEdition":"STANDARD","freeTier":true,"realtimeUpdatesMode":"REALTIME_UPDATES_MODE_ENABLED","etag":"IOjP0+SrmZUDMPXxlpuzk5UD"}
+[info] i  cloud.firestore: checking firestore.rules for compilation errors... 
+[debug] [2026-06-21T22:06:24.288Z] Checked if tokens are valid: true, expires at: 1782083182587
+[debug] [2026-06-21T22:06:24.288Z] Checked if tokens are valid: true, expires at: 1782083182587
+[debug] [2026-06-21T22:06:24.289Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/arcane-folio:test [none]
+[debug] [2026-06-21T22:06:24.289Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/arcane-folio:test [omitted]
+[debug] [2026-06-21T22:06:24.648Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/arcane-folio:test 200
+[debug] [2026-06-21T22:06:24.648Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/arcane-folio:test {}
+[info] ✔  cloud.firestore: rules file firestore.rules compiled successfully 
+[debug] [2026-06-21T22:06:24.648Z] Checked if tokens are valid: true, expires at: 1782083182587
+[debug] [2026-06-21T22:06:24.649Z] Checked if tokens are valid: true, expires at: 1782083182587
+[debug] [2026-06-21T22:06:24.649Z] >>> [apiv2][query] GET https://firebaserules.googleapis.com/v1/projects/arcane-folio/releases pageSize=10&pageToken=
+[debug] [2026-06-21T22:06:24.860Z] <<< [apiv2][status] GET https://firebaserules.googleapis.com/v1/projects/arcane-folio/releases 200
+[debug] [2026-06-21T22:06:24.860Z] <<< [apiv2][body] GET https://firebaserules.googleapis.com/v1/projects/arcane-folio/releases {"releases":[{"name":"projects/arcane-folio/releases/cloud.firestore","rulesetName":"projects/arcane-folio/rulesets/ecfb872c-524f-4474-b3bb-b7b118b33151","createTime":"2026-06-19T13:23:33.798429Z","updateTime":"2026-06-20T16:52:37.637854Z"}]}
+[debug] [2026-06-21T22:06:24.860Z] Checked if tokens are valid: true, expires at: 1782083182587
+[debug] [2026-06-21T22:06:24.860Z] Checked if tokens are valid: true, expires at: 1782083182587
+[debug] [2026-06-21T22:06:24.860Z] >>> [apiv2][query] GET https://firebaserules.googleapis.com/v1/projects/arcane-folio/rulesets/ecfb872c-524f-4474-b3bb-b7b118b33151 [none]
+[debug] [2026-06-21T22:06:25.025Z] <<< [apiv2][status] GET https://firebaserules.googleapis.com/v1/projects/arcane-folio/rulesets/ecfb872c-524f-4474-b3bb-b7b118b33151 200
+[debug] [2026-06-21T22:06:25.025Z] <<< [apiv2][body] GET https://firebaserules.googleapis.com/v1/projects/arcane-folio/rulesets/ecfb872c-524f-4474-b3bb-b7b118b33151 [omitted]
+[info] i  firestore: uploading rules firestore.rules... 
+[debug] [2026-06-21T22:06:25.026Z] Checked if tokens are valid: true, expires at: 1782083182587
+[debug] [2026-06-21T22:06:25.026Z] Checked if tokens are valid: true, expires at: 1782083182587
+[debug] [2026-06-21T22:06:25.026Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/arcane-folio/rulesets [none]
+[debug] [2026-06-21T22:06:25.026Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/arcane-folio/rulesets [omitted]
+[debug] [2026-06-21T22:06:25.324Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/arcane-folio/rulesets 200
+[debug] [2026-06-21T22:06:25.324Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/arcane-folio/rulesets {"name":"projects/arcane-folio/rulesets/978e47ac-c7f9-42a7-b0a7-23956945b81c","source":{"files":[{"content":"rules_version = '2';\n\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    function isSignedIn() {\n      return request.auth != null;\n    }\n\n    function isOwner(uid) {\n      return isSignedIn() && request.auth.uid == uid;\n    }\n\n    // Legacy top-level collection — migration read/delete only (not used by normal app flow)\n    match /characters/{characterId} {\n      allow read, delete: if isSignedIn()\n        && resource.data.ownerId == request.auth.uid;\n    }\n\n    match /users/{uid} {\n      allow read, create, update, delete: if isOwner(uid);\n\n      match /characters/{characterId} {\n        allow create: if isOwner(uid)\n          && request.resource.data.ownerId == uid;\n\n        allow read, delete: if isOwner(uid);\n\n        allow update: if isOwner(uid)\n          && request.resource.data.ownerId == uid\n          && (!('ownerId' in resource.data) || resource.data.ownerId == uid);\n\n        match /sheet/{docId} {\n          allow read, create, update, delete: if isOwner(uid);\n        }\n\n        match /spellbook/{docId} {\n          allow read, create, update, delete: if isOwner(uid);\n        }\n\n        match /state/{docId} {\n          allow read, create, update, delete: if isOwner(uid);\n        }\n      }\n\n      match /npcs/{npcId} {\n        allow create: if isOwner(uid)\n          && request.resource.data.ownerId == uid;\n\n        allow read, delete: if isOwner(uid);\n\n        allow update: if isOwner(uid)\n          && request.resource.data.ownerId == uid\n          && (!('ownerId' in resource.data) || resource.data.ownerId == uid);\n\n        match /spellbook/{docId} {\n          allow read, create, update, delete: if isOwner(uid);\n        }\n      }\n    }\n  }\n}\n","name":"firestore.rules"}]},"createTime":"2026-06-21T22:06:25.280543Z","metadata":{"services":["cloud.firestore"]}}
+[debug] [2026-06-21T22:06:25.324Z] [rules] created ruleset projects/arcane-folio/rulesets/978e47ac-c7f9-42a7-b0a7-23956945b81c
+[debug] [2026-06-21T22:06:25.325Z] [rules] releasing cloud.firestore with ruleset projects/arcane-folio/rulesets/978e47ac-c7f9-42a7-b0a7-23956945b81c
+[debug] [2026-06-21T22:06:25.325Z] Checked if tokens are valid: true, expires at: 1782083182587
+[debug] [2026-06-21T22:06:25.325Z] Checked if tokens are valid: true, expires at: 1782083182587
+[debug] [2026-06-21T22:06:25.325Z] >>> [apiv2][query] PATCH https://firebaserules.googleapis.com/v1/projects/arcane-folio/releases/cloud.firestore [none]
+[debug] [2026-06-21T22:06:25.325Z] >>> [apiv2][body] PATCH https://firebaserules.googleapis.com/v1/projects/arcane-folio/releases/cloud.firestore {"release":{"name":"projects/arcane-folio/releases/cloud.firestore","rulesetName":"projects/arcane-folio/rulesets/978e47ac-c7f9-42a7-b0a7-23956945b81c"}}
+[debug] [2026-06-21T22:06:25.672Z] <<< [apiv2][status] PATCH https://firebaserules.googleapis.com/v1/projects/arcane-folio/releases/cloud.firestore 200
+[debug] [2026-06-21T22:06:25.673Z] <<< [apiv2][body] PATCH https://firebaserules.googleapis.com/v1/projects/arcane-folio/releases/cloud.firestore {"name":"projects/arcane-folio/releases/cloud.firestore","rulesetName":"projects/arcane-folio/rulesets/978e47ac-c7f9-42a7-b0a7-23956945b81c","createTime":"2026-06-19T13:23:33.798429Z","updateTime":"2026-06-21T22:06:25.631365Z"}
+[debug] [2026-06-21T22:06:25.673Z] [rules] updated release projects/arcane-folio/releases/cloud.firestore
+[info] ✔  firestore: released rules firestore.rules to cloud.firestore 
+[info] 
+[info] ✔  Deploy complete! 
+[info] 
+[info] Project Console: https://console.firebase.google.com/project/arcane-folio/overview

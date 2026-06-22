@@ -8,7 +8,7 @@ import {
   handleEmailChange,
   handlePasswordChange,
 } from '../utils/LoginAuth';
-import { getAuthErrorMessage, signInWithGoogle } from '../utils/auth/authService';
+import { getAuthErrorMessage } from '../utils/auth/authService';
 import globalStyles from '../styles/styles';
 import wizard from '../assets/images/wizard.webp';
 import ImageBackgroundWrapper from '../components/imageBackground';
@@ -38,23 +38,6 @@ export default function LoginPage() {
 
     try {
       await handleLogin(email.value, password.value, navigation, setEmail, setPassword);
-    } catch (error) {
-      setFormError(getAuthErrorMessage(error));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const submitGoogleLogin = async () => {
-    setFormError('');
-    setIsSubmitting(true);
-
-    try {
-      const signInMode = await signInWithGoogle();
-
-      if (signInMode === 'popup') {
-        router.push('/characters');
-      }
     } catch (error) {
       setFormError(getAuthErrorMessage(error));
     } finally {
@@ -108,17 +91,6 @@ export default function LoginPage() {
               style={{ width: '100%' }}
             >
               {isSubmitting ? 'Signing in...' : 'Login'}
-            </Buttons>
-          </div>
-
-          <div style={{ width: '100%', marginTop: 12 }}>
-            <Buttons
-              mode="outlined"
-              onPress={submitGoogleLogin}
-              disabled={isSubmitting}
-              style={{ width: '100%', backgroundColor: '#4285F4', color: '#fff', borderColor: '#4285F4' }}
-            >
-              Continue with Google
             </Buttons>
           </div>
 

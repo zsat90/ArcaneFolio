@@ -41,6 +41,21 @@ service cloud.firestore {
           allow read, create, update, delete: if isOwner(uid);
         }
       }
+
+      match /npcs/{npcId} {
+        allow create: if isOwner(uid)
+          && request.resource.data.ownerId == uid;
+
+        allow read, delete: if isOwner(uid);
+
+        allow update: if isOwner(uid)
+          && request.resource.data.ownerId == uid
+          && (!('ownerId' in resource.data) || resource.data.ownerId == uid);
+
+        match /spellbook/{docId} {
+          allow read, create, update, delete: if isOwner(uid);
+        }
+      }
     }
   }
 }
