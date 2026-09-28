@@ -11,6 +11,7 @@ type SpellPickerProps = {
   targetType: SpellPickerTargetType;
   targetId: string | number;
   allowedSpellType?: AllowedSpellType | null;
+  allowedSpellTypes?: AllowedSpellType[];
   allowedSpellRules?: (spell: Spell) => boolean;
   mode: SpellPickerMode;
   selectedLevel?: number;
@@ -88,6 +89,7 @@ export default function SpellPicker({
   targetType,
   targetId,
   allowedSpellType,
+  allowedSpellTypes,
   allowedSpellRules,
   mode,
   selectedLevel = 1,
@@ -101,7 +103,9 @@ export default function SpellPicker({
   const [selectedSpell, setSelectedSpell] = useState<Spell | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const allowedSpellClass = allowedSpellType ? formatAllowedSpellTypeLabel(allowedSpellType) : '';
+  const allowedSpellClasses: string[] = (allowedSpellTypes ?? (allowedSpellType ? [allowedSpellType] : []))
+    .map(formatAllowedSpellTypeLabel);
+  const allowedSpellClass = allowedSpellClasses.length === 1 ? allowedSpellClasses[0] : '';
 
   useEffect(() => {
     let active = true;
@@ -142,9 +146,10 @@ export default function SpellPicker({
 
     return spells
       .filter((spell) => spell.level === selectedLevelNumber)
+      .filter((spell) => allowedSpellClasses.length === 0 || allowedSpellClasses.includes(spell.characterClass))
       .filter((spell) => !allowedSpellRules || allowedSpellRules(spell))
       .filter((spell) => !query || spell.name.toLowerCase().includes(query));
-  }, [allowedSpellRules, level, search, spells]);
+  }, [allowedSpellClasses, allowedSpellRules, level, search, spells]);
 
   const runAction = async (spell: Spell) => {
     if (mode === 'add') {
@@ -199,6 +204,7 @@ export default function SpellPicker({
             >
               <strong style={styles.spellName}>{spell.name}</strong>
               <span style={styles.rowMeta}>Level {spell.level}</span>
+              <span style={styles.rowMeta}>{spell.characterClass}</span>
               <span style={styles.rowMeta}>{formatSpellMagicPointCost(spell)}</span>
               <button
                 type="button"

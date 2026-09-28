@@ -5,7 +5,7 @@ import SpellPicker, { SpellDetailModal, formatSpellMagicPointCost } from '../Spe
 import {
   SPELLBOOK_UNAVAILABLE_MESSAGE,
   canUseSpellbook,
-  getAllowedSpellType,
+  getAllowedSpellTypes,
   validateSpellAddition,
 } from '../../utils/character/spellAccess';
 import type { SpellbookTarget } from '../../utils/npc/npcSpellbookService';
@@ -86,7 +86,7 @@ export default function NpcSpellsManager({ npcs, onNpcUpdated }: NpcSpellsManage
     ? { targetType: 'npc', targetId: selectedNpc.id }
     : null;
   const knownSpellIds = spellbook?.spellIds ?? [];
-  const allowedSpellType = selectedNpc ? getAllowedSpellType(selectedNpc.class, selectedNpc.level) : null;
+  const allowedSpellTypes = selectedNpc ? getAllowedSpellTypes(selectedNpc.class, selectedNpc.level) : [];
 
   const reloadSpellbook = async (npc: Npc) => {
     const nextTarget: SpellbookTarget = { targetType: 'npc', targetId: npc.id };
@@ -231,11 +231,11 @@ export default function NpcSpellsManager({ npcs, onNpcUpdated }: NpcSpellsManage
 
             <section style={styles.section}>
               <h3 style={styles.sectionTitle}>Add Spells</h3>
-              {selectedNpc && allowedSpellType && (
+              {selectedNpc && allowedSpellTypes.length > 0 && (
                 <SpellPicker
                   targetType="npc"
                   targetId={selectedNpc.id}
-                  allowedSpellType={allowedSpellType}
+                  allowedSpellTypes={allowedSpellTypes}
                   mode="add"
                   selectedLevel={1}
                   knownSpellIds={knownSpellIds}

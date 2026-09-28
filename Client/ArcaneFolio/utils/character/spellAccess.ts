@@ -1,38 +1,39 @@
 export type AllowedSpellType = 'priest' | 'wizard';
 
 export const PRIEST_SPELL_CLASSES = ['Priest', 'Paladin', 'Ranger', 'Druid'] as const;
-export const WIZARD_SPELL_CLASSES = ['Wizard', 'Runeist'] as const;
+export const WIZARD_SPELL_CLASSES = ['Wizard', 'Runeist', 'Bard', 'Druid', 'Ranger'] as const;
 
 export const SPELLBOOK_UNAVAILABLE_MESSAGE = 'This class cannot use a spellbook.';
 export const SPELL_ADD_UNAVAILABLE_MESSAGE = 'This class cannot add spells.';
 export const SPELL_LEARN_DENIED_MESSAGE = 'This character class cannot learn this spell.';
 
-export const getAllowedSpellType = (characterClass: string, level?: number): AllowedSpellType | null => {
+export const getAllowedSpellTypes = (characterClass: string, level?: number): AllowedSpellType[] => {
   const trimmedClass = characterClass.trim();
   const classLevel = Number.isFinite(level) ? Number(level) : null;
-
-  if (trimmedClass === 'Ranger' && classLevel !== null && classLevel < 8) {
-    return null;
-  }
-
-  if (trimmedClass === 'Paladin' && classLevel !== null && classLevel < 9) {
-    return null;
-  }
+  const allowedSpellTypes: AllowedSpellType[] = [];
 
   if ((PRIEST_SPELL_CLASSES as readonly string[]).includes(trimmedClass)) {
-    return 'priest';
+    if (trimmedClass !== 'Ranger' || classLevel === null || classLevel >= 8) {
+      if (trimmedClass !== 'Paladin' || classLevel === null || classLevel >= 9) {
+        allowedSpellTypes.push('priest');
+      }
+    }
   }
 
   if ((WIZARD_SPELL_CLASSES as readonly string[]).includes(trimmedClass)) {
-    return 'wizard';
+    allowedSpellTypes.push('wizard');
   }
 
-  return null;
+  return allowedSpellTypes;
 };
 
-export const canUseSpellbook = (characterClass: string, level?: number) => getAllowedSpellType(characterClass, level) !== null;
+export const getAllowedSpellType = (characterClass: string, level?: number): AllowedSpellType | null => (
+  getAllowedSpellTypes(characterClass, level)[0] ?? null
+);
 
-export const canAddSpells = (characterClass: string, level?: number) => getAllowedSpellType(characterClass, level) !== null;
+export const canUseSpellbook = (characterClass: string, level?: number) => getAllowedSpellTypes(characterClass, level).length > 0;
+
+export const canAddSpells = (characterClass: string, level?: number) => getAllowedSpellTypes(characterClass, level).length > 0;
 
 export const normalizeSpellType = (spellType: string): AllowedSpellType | null => {
   const normalized = spellType.trim().toLowerCase();
@@ -53,10 +54,9 @@ export const formatAllowedSpellTypeLabel = (spellType: AllowedSpellType) => (
 );
 
 export const canCharacterLearnSpellType = (characterClass: string, spellType: string) => {
-  const allowedSpellType = getAllowedSpellType(characterClass);
   const normalizedSpellType = normalizeSpellType(spellType);
 
-  return allowedSpellType !== null && allowedSpellType === normalizedSpellType;
+  return normalizedSpellType !== null && getAllowedSpellTypes(characterClass).includes(normalizedSpellType);
 };
 
 export const validateSpellAddition = (

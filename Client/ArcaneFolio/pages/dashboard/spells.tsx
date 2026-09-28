@@ -8,6 +8,7 @@ import {
   useSelectedCharacter,
   useSpellbookIds,
 } from '../../utils/character/characterState';
+import { validateSpellAddition } from '../../utils/character/spellAccess';
 
 export default function SpellsPage() {
   const [spellSearch, setSpellSearch] = useState('');
@@ -78,9 +79,10 @@ export default function SpellsPage() {
     }
 
     const characterClass = selectedCharacter.characterClass || selectedCharacter.class;
+    const validation = validateSpellAddition(characterClass, spell.characterClass);
 
-    if (spell.characterClass && characterClass && spell.characterClass !== characterClass) {
-      setNotice(`${spell.name} was not added. ${selectedCharacter.name} is a ${characterClass}.`);
+    if (!validation.ok) {
+      setNotice(`${spell.name} was not added. ${validation.error}`);
       return;
     }
 
