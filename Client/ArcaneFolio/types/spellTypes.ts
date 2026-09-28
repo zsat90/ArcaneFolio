@@ -16,4 +16,5 @@ export type Spell = {
   duration: string;
   description: string;
   spellbookId?: number | null;
+  cantripEffects?: Spell[];
 };

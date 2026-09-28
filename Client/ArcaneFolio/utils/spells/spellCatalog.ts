@@ -41,7 +41,22 @@ export const getSeedSpells = (): Spell[] => {
     }
   });
 
-  return Array.from(uniqueSpells.values());
+  const spells = Array.from(uniqueSpells.values());
+  const cantripEffects = spells.filter((spell) => (
+    spell.characterClass.toLowerCase() === 'wizard'
+    && spell.level === 1
+    && spell.name.toLowerCase() !== 'cantrip'
+    && /\bcantrip\b/i.test(spell.description)
+  ));
+  const cantripEffectIds = new Set(cantripEffects.map((spell) => spell.id));
+
+  return spells
+    .filter((spell) => !cantripEffectIds.has(spell.id))
+    .map((spell) => (
+      spell.characterClass.toLowerCase() === 'wizard' && spell.name.toLowerCase() === 'cantrip'
+        ? { ...spell, cantripEffects }
+        : spell
+    ));
 };
 
 export const getSpellById = (spellId: number) => (
@@ -53,6 +68,14 @@ export type SpellCatalogFilters = {
   level?: number;
   school?: string;
   search?: string;
+};
+
+export const spellMatchesSearch = (spell: Spell, query: string) => {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  return !normalizedQuery
+    || spell.name.toLowerCase().includes(normalizedQuery)
+    || spell.cantripEffects?.some((effect) => effect.name.toLowerCase().includes(normalizedQuery)) === true;
 };
 
 export const filterSeedSpells = (filters: SpellCatalogFilters = {}) => {
@@ -73,6 +96,6 @@ export const filterSeedSpells = (filters: SpellCatalogFilters = {}) => {
 
       return filterGroups.some((school) => school.toLowerCase() === schoolQuery);
     })
-    .filter((spell) => !searchQuery || spell.name.toLowerCase().includes(searchQuery))
+    .filter((spell) => !searchQuery || spellMatchesSearch(spell, searchQuery))
     .sort((a, b) => a.name.localeCompare(b.name) || a.level - b.level);
 };

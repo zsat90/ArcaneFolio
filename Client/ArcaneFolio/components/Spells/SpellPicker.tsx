@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Spell } from '../../types/spellTypes';
+import CantripEffectList from './CantripEffectList';
 import { AllowedSpellType, formatAllowedSpellTypeLabel } from '../../utils/character/spellAccess';
+import { spellMatchesSearch } from '../../utils/spells/spellCatalog';
 import { getSpellMagicPointCost } from '../../utils/spells/spellCastingService';
 import { loadSpells } from '../../utils/spells/spellService';
 
@@ -75,6 +77,8 @@ export function SpellDetailModal({
           <p style={styles.description}>{spell.description}</p>
         </div>
 
+        {spell.cantripEffects && <CantripEffectList effects={spell.cantripEffects} />}
+
         {onAction && (
           <button type="button" style={styles.primaryButton} onClick={() => onAction(spell)}>
             {actionLabel ?? (mode === 'add' ? 'Add Spell' : 'Cast Spell')}
@@ -148,7 +152,7 @@ export default function SpellPicker({
       .filter((spell) => spell.level === selectedLevelNumber)
       .filter((spell) => allowedSpellClasses.length === 0 || allowedSpellClasses.includes(spell.characterClass))
       .filter((spell) => !allowedSpellRules || allowedSpellRules(spell))
-      .filter((spell) => !query || spell.name.toLowerCase().includes(query));
+      .filter((spell) => spellMatchesSearch(spell, query));
   }, [allowedSpellClasses, allowedSpellRules, level, search, spells]);
 
   const runAction = async (spell: Spell) => {

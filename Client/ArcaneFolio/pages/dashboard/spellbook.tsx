@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ImageBackgroundWrapper from '../../components/imageBackground';
 import NavDrawer from '../../components/Navigation/navDrawer';
+import CantripEffectList from '../../components/Spells/CantripEffectList';
 import { Spell } from '../../types/spellTypes';
 import { getSpells, PRIEST_SPELL_SPHERE_OPTIONS, SPELL_SCHOOL_FILTER_OPTIONS } from '../../utils/spells/spellsService';
+import { spellMatchesSearch } from '../../utils/spells/spellCatalog';
 import {
   removeSpellFromSelectedSpellbook,
   spendMagicPoints,
@@ -62,7 +64,7 @@ export default function SpellBookPage() {
 
         return filterGroups.some((spellSchool) => spellSchool === school);
       })
-      .filter((spell) => !search || spell.name.toLowerCase().includes(search))
+      .filter((spell) => !search || spellMatchesSearch(spell, search))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [spellSearch, selectedLevel, selectedSchool, spellbookIds, spells]);
 
@@ -198,6 +200,7 @@ export default function SpellBookPage() {
                             <h4 style={styles.descriptionTitle}>Description</h4>
                             <p style={styles.description}>{spell.description}</p>
                           </section>
+                          {spell.cantripEffects && <CantripEffectList effects={spell.cantripEffects} />}
                         </div>
                       )}
                     </article>

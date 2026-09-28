@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ImageBackgroundWrapper from '../../components/imageBackground';
 import NavDrawer from '../../components/Navigation/navDrawer';
+import CantripEffectList from '../../components/Spells/CantripEffectList';
 import { Spell } from '../../types/spellTypes';
 import { getSpells, PRIEST_SPELL_SPHERE_OPTIONS, SPELL_SCHOOL_FILTER_OPTIONS } from '../../utils/spells/spellsService';
 import {
@@ -237,6 +238,8 @@ export default function SpellsPage() {
                     <h4 style={styles.descriptionTitle}>Description</h4>
                     <p style={styles.description}>{spell.description}</p>
                   </section>
+
+                  {spell.cantripEffects && <CantripEffectList effects={spell.cantripEffects} />}
                 </div>
               )}
             </article>
