@@ -12,7 +12,7 @@ import {
   getCumulativeProgression,
 } from '../../utils/spells/randomSpellbook';
 
-const GENERATOR_CLASSES: GeneratorClass[] = ['Wizard', 'Runeist', 'Bard'];
+const GENERATOR_CLASSES: GeneratorClass[] = ['Wizard', 'Runeist', 'Bard', 'Priest'];
 
 export default function RandomSpellGeneratorPage() {
   const selectedCharacter = useSelectedCharacter();
@@ -88,7 +88,7 @@ export default function RandomSpellGeneratorPage() {
 
     const count = Math.max(1, Number(randomCount) || 1);
     setRandomCount(String(count));
-    setGeneratedSpells(generateRandomSpellbook(spells, count));
+    setGeneratedSpells(generateRandomSpellbook(spells, count, generatorClass));
   };
 
   const handleAddSpell = (spell: Spell) => {
@@ -131,6 +131,7 @@ export default function RandomSpellGeneratorPage() {
               type="button"
               onClick={() => setMode('progression')}
               style={{ ...styles.modeButton, ...(mode === 'progression' ? styles.modeButtonActive : {}) }}
+              disabled={generatorClass === 'Priest'}
             >
               Level Chart
             </button>
@@ -148,7 +149,13 @@ export default function RandomSpellGeneratorPage() {
               <span style={styles.label}>Class</span>
               <select
                 value={generatorClass}
-                onChange={(event) => setGeneratorClass(event.target.value as GeneratorClass)}
+                onChange={(event) => {
+                  const selectedClass = event.target.value as GeneratorClass;
+                  setGeneratorClass(selectedClass);
+                  if (selectedClass === 'Priest') {
+                    setMode('random');
+                  }
+                }}
                 style={styles.control}
               >
                 {GENERATOR_CLASSES.map((item) => (

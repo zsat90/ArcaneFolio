@@ -1,6 +1,7 @@
 import { Spell } from '../../types/spellTypes';
+import { formatAllowedSpellTypeLabel, getAllowedSpellTypes } from '../character/spellAccess';
 
-export type GeneratorClass = 'Wizard' | 'Runeist' | 'Bard';
+export type GeneratorClass = 'Wizard' | 'Runeist' | 'Bard' | 'Priest';
 export type GeneratorMode = 'progression' | 'random';
 
 type SpellProgression = Record<number, readonly number[]>;
@@ -74,10 +75,16 @@ export const BARD_SPELL_PROGRESSION = {
   20: [4, 4, 4, 4, 4, 3],
 } as const;
 
-const PROGRESSIONS: Record<GeneratorClass, SpellProgression> = {
+const PROGRESSIONS: Partial<Record<GeneratorClass, SpellProgression>> = {
   Wizard: WIZARD_SPELL_PROGRESSION,
   Runeist: RUNEIST_SPELL_PROGRESSION,
   Bard: BARD_SPELL_PROGRESSION,
+};
+
+export const getSpellsForGeneratorClass = (spells: Spell[], generatorClass: GeneratorClass) => {
+  const allowedClasses: string[] = getAllowedSpellTypes(generatorClass).map(formatAllowedSpellTypeLabel);
+
+  return spells.filter((spell) => allowedClasses.includes(spell.characterClass));
 };
 
 const shuffle = <T,>(items: T[]) => {
@@ -93,6 +100,11 @@ const shuffle = <T,>(items: T[]) => {
 
 export const getCumulativeProgression = (generatorClass: GeneratorClass, casterLevel: number) => {
   const progression = PROGRESSIONS[generatorClass];
+
+  if (!progression) {
+    return [];
+  }
+
   const maxSpellLevel = Math.max(...Object.values(progression).map((row) => row.length));
   const totals = Array.from({ length: maxSpellLevel }, () => 0);
   const normalizedLevel = Math.max(1, Math.min(20, casterLevel));
@@ -113,18 +125,26 @@ export const generateProgressionSpellbook = (
   generatorClass: GeneratorClass,
   casterLevel: number,
 ) => {
+  const classSpells = getSpellsForGeneratorClass(spells, generatorClass);
+  const progression = PROGRESSIONS[generatorClass];
+
+  if (!progression) {
+    return [];
+  }
+
   const totals = getCumulativeProgression(generatorClass, casterLevel);
 
   return totals.flatMap((count, index) => {
     const spellLevel = index + 1;
-    const availableSpells = spells.filter((spell) => spell.level === spellLevel);
+    const availableSpells = classSpells.filter((spell) => spell.level === spellLevel);
 
     return shuffle(availableSpells).slice(0, count);
   });
 };
 
-export const generateRandomSpellbook = (spells: Spell[], count: number) => {
-  const availableSpells = spells.filter((spell) => spell.level >= 1 && spell.level <= 10);
+export const generateRandomSpellbook = (spells: Spell[], count: number, generatorClass: GeneratorClass) => {
+  const availableSpells = getSpellsForGeneratorClass(spells, generatorClass)
+    .filter((spell) => spell.level >= 1 && spell.level <= 10);
 
   return shuffle(availableSpells).slice(0, Math.max(0, count));
 };
