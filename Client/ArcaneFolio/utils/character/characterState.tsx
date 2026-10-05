@@ -464,17 +464,20 @@ export const resetMagicPoints = () => {
 export const spendMagicPoints = (amount: number, characterFallback?: Character | null) => {
   const selectedCharacterId = readSelectedCharacterId();
   const cachedCharacter = getSelectedCharacterSnapshot();
-  const character = cachedCharacter?.id === selectedCharacterId
-    ? cachedCharacter
-    : characterFallback?.id === selectedCharacterId
-      ? normalizeCharacter(characterFallback)
+  const character = characterFallback
+    ? normalizeCharacter(characterFallback)
+    : cachedCharacter?.id === selectedCharacterId
+      ? cachedCharacter
       : null;
 
   if (!character || Number.isNaN(amount) || amount <= 0) {
     return false;
   }
 
-  if (cachedCharacter?.id !== character.id) {
+  if (characterFallback) {
+    if (selectedCharacterId !== character.id) {
+      writeSelectedCharacterId(character.id);
+    }
     selectedCharacterCache = character;
   }
 
@@ -484,7 +487,7 @@ export const spendMagicPoints = (amount: number, characterFallback?: Character |
     : undefined;
   const currentMagicPoints = displayedMagicPoints === undefined
     ? currentResources.magicPoints
-    : Math.min(Math.max(0, displayedMagicPoints), currentResources.maxMagicPoints);
+    : Math.max(0, displayedMagicPoints);
 
   if (currentMagicPoints < amount) {
     return false;
@@ -493,6 +496,7 @@ export const spendMagicPoints = (amount: number, characterFallback?: Character |
   void withSelectedCharacterUpdate((_character, current) => ({
     ...current,
     magicPoints: currentMagicPoints - amount,
+    maxMagicPoints: Math.max(current.maxMagicPoints, currentMagicPoints),
   }));
 
   return true;
