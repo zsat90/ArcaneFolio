@@ -468,7 +468,7 @@ export const spendMagicPoints = (amount: number) => {
     return false;
   }
 
-  const currentMagicPoints = character.magicPoints ?? 0;
+  const currentMagicPoints = getCalculatedCharacterResources(character).magicPoints;
 
   if (currentMagicPoints < amount) {
     return false;
@@ -476,8 +476,7 @@ export const spendMagicPoints = (amount: number) => {
 
   void withSelectedCharacterUpdate((_character, current) => ({
     ...current,
-    magicPoints: currentMagicPoints - amount,
-    maxMagicPoints: character.maxMagicPoints ?? currentMagicPoints,
+    magicPoints: current.magicPoints - amount,
   }));
 
   return true;

@@ -97,7 +97,8 @@ export default function SpellBookPage() {
     if (wasCast) {
       setNotice(`${spell.name} cast. ${spell.magicPointCost} MP spent.`);
     } else {
-      setNotice(`Not enough magic points to cast ${spell.name}.`);
+      const currentMagicPoints = selectedCharacter?.magicPoints ?? 0;
+      setNotice(`Not enough magic points to cast ${spell.name}. Current: ${currentMagicPoints} MP; cost: ${spell.magicPointCost} MP.`);
     }
   };
 
