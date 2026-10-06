@@ -92,7 +92,7 @@ export default function SpellBookPage() {
       return;
     }
 
-    const wasCast = spendMagicPoints(spell.magicPointCost);
+    const wasCast = spendMagicPoints(spell.magicPointCost, selectedCharacter);
 
     if (wasCast) {
       setNotice(`${spell.name} cast. ${spell.magicPointCost} MP spent.`);
@@ -194,6 +194,7 @@ export default function SpellBookPage() {
                             <div style={styles.detailCell}><span style={styles.detailLabel}>Casting Word</span><span style={styles.detailValue}>{spell.castingWord || 'None'}</span></div>
                             <div style={styles.detailCell}><span style={styles.detailLabel}>Word Meaning</span><span style={styles.detailValue}>{spell.castNameMeaning || 'None'}</span></div>
                             <div style={styles.detailCell}><span style={styles.detailLabel}>Range</span><span style={styles.detailValue}>{spell.range || 'Self'}</span></div>
+                            <div style={styles.detailCell}><span style={styles.detailLabel}>Duration</span><span style={styles.detailValue}>{spell.duration || 'Instantaneous'}</span></div>
                             <div style={styles.detailCell}><span style={styles.detailLabel}>Area</span><span style={styles.detailValue}>{spell.areaOfEffect || 'None'}</span></div>
                             <div style={styles.detailCell}><span style={styles.detailLabel}>Save</span><span style={styles.detailValue}>{spell.save || 'None'}</span></div>
                           </div>
