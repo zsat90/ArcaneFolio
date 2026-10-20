@@ -24,6 +24,7 @@ export default function RandomSpellGeneratorPage() {
   const [casterLevel, setCasterLevel] = useState('1');
   const [randomCount, setRandomCount] = useState('10');
   const [randomMaxLevel, setRandomMaxLevel] = useState('');
+  const [randomSchool, setRandomSchool] = useState('');
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -64,6 +65,14 @@ export default function RandomSpellGeneratorPage() {
     return Math.max(1, ...availableSpells.map((spell) => spell.level));
   }, [generatorClass, spells]);
 
+  const availableSchools = useMemo(() => {
+    const classSpells = getSpellsForGeneratorClass(spells, generatorClass);
+    return Array.from(new Set(classSpells.flatMap((spell) => (
+      spell.characterClass === 'Priest' ? spell.spheres : spell.schools
+    )).filter(Boolean)))
+      .sort((left, right) => left.localeCompare(right));
+  }, [generatorClass, spells]);
+
   const selectedMaxSpellLevel = Math.min(
     Number(randomMaxLevel) || maxAvailableSpellLevel,
     maxAvailableSpellLevel,
@@ -102,7 +111,13 @@ export default function RandomSpellGeneratorPage() {
 
     const count = Math.max(1, Number(randomCount) || 1);
     setRandomCount(String(count));
-    setGeneratedSpells(generateRandomSpellbook(spells, count, generatorClass, selectedMaxSpellLevel));
+    setGeneratedSpells(generateRandomSpellbook(
+      spells,
+      count,
+      generatorClass,
+      selectedMaxSpellLevel,
+      randomSchool || undefined,
+    ));
   };
 
   const handleAddSpell = (spell: Spell) => {
@@ -166,6 +181,7 @@ export default function RandomSpellGeneratorPage() {
                 onChange={(event) => {
                   const selectedClass = event.target.value as GeneratorClass;
                   setGeneratorClass(selectedClass);
+                  setRandomSchool('');
                   if (selectedClass === 'Priest') {
                     setMode('random');
                   }
@@ -205,16 +221,30 @@ export default function RandomSpellGeneratorPage() {
                     ))}
                   </select>
                 </label>
-              <label style={styles.field}>
-                <span style={styles.label}>Number of Spells</span>
-                <input
-                  type="number"
-                  min={1}
-                  value={randomCount}
-                  onChange={(event) => setRandomCount(event.target.value)}
-                  style={styles.control}
-                />
-              </label>
+                <label style={styles.field}>
+                  <span style={styles.label}>{generatorClass === 'Priest' ? 'Sphere' : 'School'}</span>
+                  <select
+                    value={randomSchool}
+                    onChange={(event) => setRandomSchool(event.target.value)}
+                    style={styles.control}
+                    disabled={isLoading}
+                  >
+                    <option value="">{generatorClass === 'Priest' ? 'All Spheres' : 'All Schools'}</option>
+                    {availableSchools.map((school) => (
+                      <option key={school} value={school}>{school}</option>
+                    ))}
+                  </select>
+                </label>
+                <label style={styles.field}>
+                  <span style={styles.label}>Number of Spells</span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={randomCount}
+                    onChange={(event) => setRandomCount(event.target.value)}
+                    style={styles.control}
+                  />
+                </label>
               </>
             )}
 

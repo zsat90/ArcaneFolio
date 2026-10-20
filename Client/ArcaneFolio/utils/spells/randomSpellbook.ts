@@ -147,9 +147,18 @@ export const generateRandomSpellbook = (
   count: number,
   generatorClass: GeneratorClass,
   maxSpellLevel = 10,
+  school?: string,
 ) => {
   const availableSpells = getSpellsForGeneratorClass(spells, generatorClass)
-    .filter((spell) => spell.level >= 1 && spell.level <= Math.min(10, maxSpellLevel));
+    .filter((spell) => spell.level >= 1 && spell.level <= Math.min(10, maxSpellLevel))
+    .filter((spell) => {
+      if (!school) {
+        return true;
+      }
+
+      const disciplines = spell.characterClass === 'Priest' ? spell.spheres : spell.schools;
+      return disciplines.includes(school);
+    });
 
   return shuffle(availableSpells).slice(0, Math.max(0, count));
 };
