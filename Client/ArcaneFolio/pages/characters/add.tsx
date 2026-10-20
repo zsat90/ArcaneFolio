@@ -40,6 +40,11 @@ import {
 } from '../../utils/character/abilityScores';
 import { getClassSpecialAbilitiesText, getClassXpBonusFieldValue, getRaceSelectionForClass, hasClassRules, hasClassXpBonusRule, isRaceAllowedForClass } from '../../utils/character/classRules';
 import {
+  getThievingPointsToSpend,
+  getThievingSkillPool,
+  parseThievingPointSpend,
+} from '../../utils/character/levelUp';
+import {
   WEAPON_CHART_CENTERED_FIELDS,
   WEAPON_DERIVED_READONLY_FIELDS,
   applyWeaponSelectionToRow,
@@ -547,34 +552,6 @@ const getTurningUndeadDefaults = (selectedClass: string, levelValue: number) => 
   }, {});
 };
 
-const getThievingSkillPool = (selectedClass: string, levelValue: number) => {
-  if (selectedClass === 'Rogue') {
-    return 90 + (Math.max(levelValue, 1) - 1) * 30;
-  }
-
-  if (selectedClass === 'Bard') {
-    return 60 + (Math.max(levelValue, 1) - 1) * 30;
-  }
-
-  return null;
-};
-
-const parsePointSpend = (value: string) => {
-  const parsed = Number(value.replace(/[^0-9-]/g, ''));
-  return Number.isFinite(parsed) ? parsed : 0;
-};
-
-const getThievingPointsToSpend = (selectedClass: string, levelValue: number, thievingSkills: ThievingSkillRow[]) => {
-  const pool = getThievingSkillPool(selectedClass, levelValue);
-
-  if (pool === null) {
-    return '';
-  }
-
-  const spent = thievingSkills.reduce((total, row) => total + parsePointSpend(row.thief), 0);
-  return String(pool - spent);
-};
-
 const parsePercentValue = (value: string) => {
   const parsed = Number(value.replace(/[^0-9-]/g, ''));
   return Number.isFinite(parsed) ? parsed : 0;
@@ -637,6 +614,14 @@ const calculateThievingRealPercent = (row: ThievingSkillRow, race: string) => {
     + parsePercentValue(row.armor);
 
   return `${Math.min(Math.max(total, 0), 95)}%`;
+};
+
+const getThievingFixedPercent = (row: ThievingSkillRow, race: string) => {
+  const raceField = getRaceThievingField(race);
+  return parsePercentValue(row.base)
+    + (raceField ? parsePercentValue(row[raceField]) : 0)
+    + parsePercentValue(row.dex)
+    + parsePercentValue(row.armor);
 };
 
 const recalculateThievingSkills = (
@@ -1489,9 +1474,36 @@ export default function AddCharacterPage() {
     const value = event.target.value;
 
     setSheet((currentSheet) => {
-      const updatedRows = currentSheet.thievingSkills.map((row, index) => (
+      const rows = currentSheet.thievingSkills;
+      const currentRow = rows[rowIndex];
+      const level = parseLevelTitle(currentSheet.levelTitle || '1');
+      const pointPool = getThievingSkillPool(characterClass, level);
+      let updatedRows = rows.map((row, index) => (
         index === rowIndex ? { ...row, [field]: value } : row
       ));
+
+      if (currentRow && pointPool !== null && (field === 'realPercent' || field === 'thief')) {
+        const spentBeforeEdit = rows.reduce((total, row) => total + parseThievingPointSpend(row.thief), 0);
+        const currentAllocation = parseThievingPointSpend(currentRow.thief);
+        const remainingPoints = Math.max(0, pointPool - spentBeforeEdit);
+        let nextAllocation = currentAllocation;
+
+        if (field === 'realPercent') {
+          const requestedRealPercent = Math.min(95, Math.max(0, parsePercentValue(value)));
+          const fixedPercent = getThievingFixedPercent(currentRow, currentSheet.race);
+          const requestedAllocation = Math.max(0, requestedRealPercent - fixedPercent);
+          const maxAllocation = currentAllocation + remainingPoints;
+          nextAllocation = Math.min(requestedAllocation, maxAllocation, Math.max(0, 95 - fixedPercent));
+        } else {
+          const requestedAllocation = Math.max(0, parseThievingPointSpend(value));
+          nextAllocation = Math.min(requestedAllocation, currentAllocation + remainingPoints);
+        }
+
+        updatedRows = rows.map((row, index) => index === rowIndex
+          ? { ...row, thief: formatPercentValue(nextAllocation) }
+          : row);
+      }
+
       const thievingSkills = recalculateThievingSkills(updatedRows, currentSheet.race, currentSheet.abilityDetails.Dexterity, characterClass);
 
       return {
@@ -2213,9 +2225,12 @@ export default function AddCharacterPage() {
                           {THIEVING_SKILL_COLUMNS.map(([field]) => (
                             <input
                               key={`${row.id}-${field}`}
-                              value={row[field]}
+                              value={field === 'realPercent' ? String(parsePercentValue(row.realPercent)) : row[field]}
+                              type={field === 'realPercent' ? 'number' : undefined}
+                              min={field === 'realPercent' ? 0 : undefined}
+                              max={field === 'realPercent' ? 95 : undefined}
                               onChange={updateThievingSkillRow(rowIndex, field)}
-                              readOnly={field === 'dex' || field === 'realPercent'}
+                              readOnly={field === 'dex' || (field === 'realPercent' && getThievingSkillPool(characterClass, parseLevelTitle(sheet.levelTitle || '1')) === null)}
                               style={field === 'skill' ? styles.tableInput : styles.centeredTableInput}
                             />
                           ))}
@@ -2324,7 +2339,7 @@ export default function AddCharacterPage() {
                   <div style={styles.sheetSection}>
                     <div style={styles.weaponHeader}>
                       <h3 style={styles.sheetSectionTitle}>Other Equipment</h3>
-                      <button type="button" onClick={() => addEquipmentBucketLine('Other')} style={styles.smallActionButton}>Add item</button>
+                      <button type="button" onClick={() => addEquipmentBucketLine('Other')} style={styles.smallActionButton}>Add Row</button>
                     </div>
                     <div style={styles.equipmentList}>
                       {getEquipmentBucketLines('Other').map((item, index) => (
@@ -2344,7 +2359,7 @@ export default function AddCharacterPage() {
                       <div key={field} style={styles.sheetSection}>
                         <div style={styles.weaponHeader}>
                           <h3 style={styles.sheetSectionTitle}>{field === 'Magical' ? 'Magical Items' : field}</h3>
-                          <button type="button" onClick={() => addEquipmentBucketLine(field)} style={styles.smallActionButton}>Add item</button>
+                          <button type="button" onClick={() => addEquipmentBucketLine(field)} style={styles.smallActionButton}>Add Row</button>
                         </div>
                         <div style={styles.equipmentList}>
                           {getEquipmentBucketLines(field).map((item, index) => (

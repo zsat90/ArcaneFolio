@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { HttpException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { FilterSpellsDto } from './dto/spells.dto';
 
@@ -43,24 +43,38 @@ export class SpellsService {
     }
   }
 
-  async removeSpellFromSpellbook(spellbookId: number, spellId: number) {
+  async removeSpellFromSpellbook(spellbookId: number, spellId: number, userId: number) {
     try {
-      return await this.prisma.spell.update({
-        where: { spellbookId: spellbookId, id: spellId },
+      const result = await this.prisma.spell.updateMany({
+        where: {
+          spellbookId,
+          id: spellId,
+          spellbook: { character: { is: { userId } } },
+        },
         data: {
           spellbookId: null,
         },
       });
+
+      if (result.count === 0) {
+        throw new NotFoundException('Spell not found in this spellbook.');
+      }
+
+      return this.prisma.spell.findUnique({ where: { id: spellId } });
     } catch (err) {
+      if (err instanceof HttpException) {
+        throw err;
+      }
       throw new InternalServerErrorException(err);
     }
   }
 
-  async getSpellsForSpellbook(spellbookId: number) {
+  async getSpellsForSpellbook(spellbookId: number, userId: number) {
     try {
-      return await this.prisma.spellbook.findUnique({
+      const spellbook = await this.prisma.spellbook.findFirst({
         where: {
           id: spellbookId,
+          character: { is: { userId } },
         },
         include: {
           spells: {
@@ -71,7 +85,16 @@ export class SpellsService {
           },
         },
       });
+
+      if (!spellbook) {
+        throw new NotFoundException('Spellbook not found.');
+      }
+
+      return spellbook;
     } catch (err) {
+      if (err instanceof HttpException) {
+        throw err;
+      }
       throw new InternalServerErrorException(err);
     }
   }
@@ -168,15 +191,18 @@ export class SpellsService {
     }
   }
 
-  async addSpellToSpellbook(spellbookId: number, spellId: number) {
+  async addSpellToSpellbook(spellbookId: number, spellId: number, userId: number) {
     try {
-      const spellbook = await this.prisma.spellbook.findUnique({
-        where: { id: spellbookId },
+      const spellbook = await this.prisma.spellbook.findFirst({
+        where: {
+          id: spellbookId,
+          character: { is: { userId } },
+        },
         include: { spells: true },
       });
 
       if (!spellbook) {
-        throw new Error('Spellbook not found');
+        throw new NotFoundException('Spellbook not found.');
       }
 
       const existingSpell = spellbook.spells.find(
@@ -190,6 +216,19 @@ export class SpellsService {
         };
       }
 
+      const spell = await this.prisma.spell.findUnique({ where: { id: spellId } });
+
+      if (!spell) {
+        throw new NotFoundException('Spell not found.');
+      }
+
+      if (spell.spellbookId !== null && spell.spellbookId !== spellbookId) {
+        return {
+          success: false,
+          message: 'Spell is already assigned to another spellbook',
+        };
+      }
+
       const updatedSpellbook = await this.prisma.spellbook.update({
         where: { id: spellbookId },
         data: {
@@ -200,6 +239,9 @@ export class SpellsService {
 
       return { success: true, updatedSpellbook: updatedSpellbook.spells };
     } catch (err) {
+      if (err instanceof HttpException) {
+        throw err;
+      }
       throw new InternalServerErrorException(err);
     }
   }

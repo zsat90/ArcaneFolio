@@ -1,4 +1,4 @@
-import type { CharacterSheetState } from './characterSheetState';
+import type { CharacterSheetState, ThievingSkillRow } from './characterSheetState';
 import { calculateSheetMagicPoints } from './characterSheetState';
 import {
   formatExperience,
@@ -74,12 +74,12 @@ export type ApplyLevelChangeResult = {
   attentionKeys: LevelUpAttentionKey[];
 };
 
-const parsePointSpend = (value: string) => {
+export const parseThievingPointSpend = (value: string) => {
   const parsed = Number(value.replace(/[^0-9-]/g, ''));
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
-const getThievingSkillPool = (characterClass: string, levelValue: number) => {
+export const getThievingSkillPool = (characterClass: string, levelValue: number) => {
   const boundedLevel = Math.max(levelValue, 1);
 
   if (THIEVING_POINT_ROGUE_CLASSES.includes(characterClass)) {
@@ -91,6 +91,21 @@ const getThievingSkillPool = (characterClass: string, levelValue: number) => {
   }
 
   return null;
+};
+
+export const getThievingPointsToSpend = (
+  characterClass: string,
+  levelValue: number,
+  thievingSkills: ThievingSkillRow[],
+) => {
+  const pool = getThievingSkillPool(characterClass, levelValue);
+
+  if (pool === null) {
+    return '';
+  }
+
+  const spent = thievingSkills.reduce((total, row) => total + parseThievingPointSpend(row.thief), 0);
+  return String(Math.max(0, pool - spent));
 };
 
 const getEffectiveTurningLevel = (characterClass: string, levelValue: number) => {
@@ -214,8 +229,6 @@ export const applyLevelChangeToSheet = (
   const weaponSlotGain = getWeaponSlotGain(sheet, oldLevel, newLevel);
   const nonWeaponSlotGain = getNonWeaponSlotGain(sheet, oldLevel, newLevel);
   const nextThievingPool = getThievingSkillPool(characterClass, newLevel);
-  const spentThievingPoints = sheet.thievingSkills.reduce((total, row) => total + parsePointSpend(row.thief), 0);
-
   const nextSheet: CharacterSheetState = {
     ...sheet,
     levelTitle: nextLevelTitle,
@@ -240,9 +253,7 @@ export const applyLevelChangeToSheet = (
       'Non-Weapon Initial Slots': nonWeaponSlotGain
         ? addToNumericField(sheet.proficiencyDetails['Non-Weapon Initial Slots'], nonWeaponSlotGain)
         : sheet.proficiencyDetails['Non-Weapon Initial Slots'],
-      'Thieving Skill Points': nextThievingPool === null
-        ? ''
-        : String(nextThievingPool - spentThievingPoints),
+      'Thieving Skill Points': getThievingPointsToSpend(characterClass, newLevel, sheet.thievingSkills),
     },
     turningUndead: getTurningUndeadDefaultsForLevel(characterClass, newLevel),
     xpAwardRows: sheet.xpAwardRows.map((row) => ({ ...row, xp: '' })),

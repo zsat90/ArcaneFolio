@@ -1,4 +1,10 @@
-import { IsOptional, IsString, IsInt } from 'class-validator';
+import { IsOptional, IsString, IsInt, Min } from 'class-validator';
+
+export class AddSpellToSpellbookDto {
+  @IsInt()
+  @Min(1)
+  spellId: number;
+}
 
 export class FilterSpellsDto {
   @IsOptional()

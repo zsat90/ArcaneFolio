@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, BadRequestException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { CharacterDto } from './dto/characters.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Character } from '@prisma/client';
@@ -39,6 +39,7 @@ export class CharactersService {
           characterClass: characterDto.characterClass,
           level: characterDto.level,
           magicPoints: characterDto.magicPoints,
+          maxMagicPoints: characterDto.maxMagicPoints ?? characterDto.magicPoints,
           user: { connect: { id: userId } },
           spellbook: { connect: { id: spellbook.id } },
         },
@@ -56,50 +57,63 @@ export class CharactersService {
   }
   
   // update character
-  async updateCharacter(characterId: number, updateData: Partial<CharacterDto>){
+  async updateCharacter(characterId: number, userId: number, updateData: Partial<CharacterDto>){
     try{
-      const updatedCharacter = await this.prisma.character.update({
-        where: {id: characterId},
+      const result = await this.prisma.character.updateMany({
+        where: { id: characterId, userId },
         data: {
           name: updateData.name,
           characterClass: updateData.characterClass,
           level: updateData.level,
           magicPoints: updateData.magicPoints,
+          maxMagicPoints: updateData.maxMagicPoints,
 
         }
       })
 
-      return updatedCharacter
+      if (result.count === 0) {
+        throw new NotFoundException('Character not found.')
+      }
+
+      return this.prisma.character.findFirst({ where: { id: characterId, userId } })
 
     }catch(err){
+      if (err instanceof NotFoundException) {
+        throw err
+      }
       throw new InternalServerErrorException(err)
     }
   
   }
 
   // Delete character
-  async deleteCharacter(characterId: number) {
+  async deleteCharacter(characterId: number, userId: number) {
     try{
-      await this.prisma.character.delete({
-        where: {
-          id: characterId
-        }
+      const result = await this.prisma.character.deleteMany({
+        where: { id: characterId, userId },
       })
 
+      if (result.count === 0) {
+        throw new NotFoundException('Character not found.')
+      }
+
     }catch(err){
+      if (err instanceof NotFoundException) {
+        throw err
+      }
       throw new InternalServerErrorException(err)
     }
   }
 
   // Add Magic Points to Character
-  async addMagicPoints(characterId: number, magicPointsToAdd: number): Promise<Character>{
+  async addMagicPoints(characterId: number, userId: number, magicPointsToAdd: number): Promise<Character>{
     try{
       if (magicPointsToAdd <= 0) {
         throw new BadRequestException("Magic points to add must be greater than zero.");
       }
 
-      const updatedCharacter = await this.prisma.character.update({
-        where: { id: characterId},
+      const result = await this.prisma.character.updateMany({
+        where: { id: characterId, userId },
         data: {
           magicPoints: {
             increment: magicPointsToAdd
@@ -107,34 +121,51 @@ export class CharactersService {
         }
 
       })
+
+      if (result.count === 0) {
+        throw new NotFoundException('Character not found.')
+      }
+
+      const updatedCharacter = await this.prisma.character.findFirst({ where: { id: characterId, userId } })
+
+      if (!updatedCharacter) {
+        throw new NotFoundException('Character not found.')
+      }
+
       return updatedCharacter
 
     }catch(err){
+      if (err instanceof BadRequestException || err instanceof NotFoundException) {
+        throw err
+      }
       throw new InternalServerErrorException(err)
     }
   }
 
   // Magic Points reset
-  async resetMagicPoints(characterId: number): Promise<Character> {
+  async resetMagicPoints(characterId: number, userId: number): Promise<Character> {
     try{
       // find the character's original magic points
       const character = await this.prisma.character.findUnique({
-        where: {id: characterId}
+        where: { id: characterId, userId }
       })
 
       if(!character){
-        throw new Error('Character not found')
+        throw new NotFoundException('Character not found.')
       }
 
       const resetCharacter = await this.prisma.character.update({
-        where: {id: characterId},
+        where: { id: characterId, userId },
         data: {
-          magicPoints: character.magicPoints
+          magicPoints: character.maxMagicPoints,
         }
       })
       return resetCharacter
 
     }catch(err){
+      if (err instanceof NotFoundException) {
+        throw err
+      }
       throw new InternalServerErrorException(err)
     }
   }

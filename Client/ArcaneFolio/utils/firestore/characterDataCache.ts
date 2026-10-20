@@ -69,7 +69,13 @@ export const preloadCharacterData = async (characterId: number) => {
 
     spellbookCache.set(characterId, spellbook);
     if (runtimeState) {
-      runtimeCache.set(characterId, runtimeState);
+      const cachedRuntime = runtimeCache.get(characterId);
+      const cachedUpdatedAt = cachedRuntime?.updatedAt ?? 0;
+      const remoteUpdatedAt = runtimeState.updatedAt ?? 0;
+
+      if (!cachedRuntime || remoteUpdatedAt >= cachedUpdatedAt) {
+        runtimeCache.set(characterId, runtimeState);
+      }
     }
   })();
 

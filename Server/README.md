@@ -32,6 +32,14 @@
 $ yarn install
 ```
 
+## Database migrations
+
+Apply pending migrations against the target database before deploying code that depends on them:
+
+```bash
+npm run migrate:deploy
+```
+
 ## Compile and run the project
 
 ```bash

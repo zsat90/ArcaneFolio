@@ -7,9 +7,12 @@ import {
   ParseIntPipe,
   Delete,
   Query,
+  Request,
+  UseGuards,
 } from '@nestjs/common';
 import { SpellsService } from './spells.service';
-import { FilterSpellsDto } from './dto/spells.dto';
+import { AddSpellToSpellbookDto, FilterSpellsDto } from './dto/spells.dto';
+import { JwtAuthGuard } from 'src/auth/auth.guard';
 
 @Controller('spells')
 export class SpellsController {
@@ -44,24 +47,32 @@ export class SpellsController {
   }
 
   @Post(':spellbookId/add-spell')
+  @UseGuards(JwtAuthGuard)
   async addSpellToSpellbook(
     @Param('spellbookId', ParseIntPipe) spellbookId: number,
-    @Body() { spellId }: { spellId: number },
+    @Body() { spellId }: AddSpellToSpellbookDto,
+    @Request() req,
   ) {
-    return this.spellService.addSpellToSpellbook(spellbookId, spellId);
+    return this.spellService.addSpellToSpellbook(spellbookId, spellId, req.user.id);
   }
 
   @Get('spellbook/:spellbookId')
-  async getSpellbook(@Param('spellbookId', ParseIntPipe) spellbookId: number) {
-    return this.spellService.getSpellsForSpellbook(spellbookId);
+  @UseGuards(JwtAuthGuard)
+  async getSpellbook(
+    @Param('spellbookId', ParseIntPipe) spellbookId: number,
+    @Request() req,
+  ) {
+    return this.spellService.getSpellsForSpellbook(spellbookId, req.user.id);
   }
 
   @Delete('spellbook/:spellbookId/:id')
+  @UseGuards(JwtAuthGuard)
   async removeSpell(
     @Param('spellbookId', ParseIntPipe) spellbookId: number,
     @Param('id', ParseIntPipe) id: number,
+    @Request() req,
   ) {
-    return this.spellService.removeSpellFromSpellbook(spellbookId, id);
+    return this.spellService.removeSpellFromSpellbook(spellbookId, id, req.user.id);
   }
 
   @Get(':characterClass/filter')

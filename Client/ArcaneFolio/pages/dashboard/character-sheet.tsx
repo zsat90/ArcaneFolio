@@ -67,6 +67,9 @@ import {
 } from '../../utils/character/weaponProficiencies';
 import {
   applyLevelChangeToSheet,
+  getThievingPointsToSpend,
+  getThievingSkillPool,
+  parseThievingPointSpend,
   type LevelUpAttentionKey,
 } from '../../utils/character/levelUp';
 
@@ -303,6 +306,14 @@ const calculateThievingRealPercent = (row: ThievingSkillRow, race: string) => {
   return `${Math.min(Math.max(total, 0), 95)}%`;
 };
 
+const getThievingFixedPercent = (row: ThievingSkillRow, race: string) => {
+  const raceField = getRaceThievingField(race);
+  return parsePercentValue(row.base)
+    + (raceField ? parsePercentValue(row[raceField]) : 0)
+    + parsePercentValue(row.dex)
+    + parsePercentValue(row.armor);
+};
+
 const recalculateThievingSkills = (
   rows: ThievingSkillRow[],
   race: string,
@@ -451,7 +462,7 @@ export default function CharacterSheetPage() {
     }
 
     setCharacterSheet(Number(sheetKey), sheet);
-    void syncMagicPointsFromSheet(Number(sheetKey), characterClass, parseLevelTitle(sheet.levelTitle || characterLevel));
+    void syncMagicPointsFromSheet(Number(sheetKey), characterClass, parseLevelTitle(sheet.levelTitle || characterLevel), true);
     setSaveState('Saved');
     setUpdateButtonState('updated');
     window.setTimeout(() => setUpdateButtonState('idle'), 900);
@@ -533,6 +544,11 @@ export default function CharacterSheetPage() {
       );
       const levelValue = parseLevelTitle(loadedSheet.levelTitle || characterLevel);
       const recalculatedMagicPoints = calculateSheetMagicPoints(characterClass, levelValue, loadedSheet);
+      const savedMagicPointsText = loadedSheet.combatDetails.MP.replace(/,/g, '').trim();
+      const savedMagicPoints = Number(savedMagicPointsText);
+      const sheetMagicPoints = savedMagicPointsText && Number.isFinite(savedMagicPoints)
+        ? String(Math.max(0, savedMagicPoints))
+        : String(recalculatedMagicPoints);
 
       setSheet({
         ...loadedSheet,
@@ -550,7 +566,7 @@ export default function CharacterSheetPage() {
         },
         combatDetails: {
           ...loadedSheet.combatDetails,
-          MP: String(recalculatedMagicPoints),
+          MP: sheetMagicPoints,
         },
       });
       sheetHydratedForKey.current = sheetKey;
@@ -1064,18 +1080,50 @@ export default function CharacterSheetPage() {
     clearAttention('thieving.points');
     setSaveState('Saving');
     setSheet((currentSheet) => {
-      const updatedRows = currentSheet.thievingSkills.map((row, index) => (
+      const rows = currentSheet.thievingSkills;
+      const currentRow = rows[rowIndex];
+      const level = parseLevelTitle(currentSheet.levelTitle || characterLevel);
+      const pointPool = getThievingSkillPool(characterClass, level);
+      let updatedRows = rows.map((row, index) => (
         index === rowIndex ? { ...row, [field]: value } : row
       ));
 
+      if (currentRow && pointPool !== null && (field === 'realPercent' || field === 'thief')) {
+        const spentBeforeEdit = rows.reduce((total, row) => total + parseThievingPointSpend(row.thief), 0);
+        const currentAllocation = parseThievingPointSpend(currentRow.thief);
+        const remainingPoints = Math.max(0, pointPool - spentBeforeEdit);
+        let nextAllocation = currentAllocation;
+
+        if (field === 'realPercent') {
+          const requestedRealPercent = Math.min(95, Math.max(0, parsePercentValue(value)));
+          const fixedPercent = getThievingFixedPercent(currentRow, currentSheet.race);
+          const requestedAllocation = Math.max(0, requestedRealPercent - fixedPercent);
+          const maxAllocation = currentAllocation + remainingPoints;
+          nextAllocation = Math.min(requestedAllocation, maxAllocation, Math.max(0, 95 - fixedPercent));
+        } else {
+          const requestedAllocation = Math.max(0, parseThievingPointSpend(value));
+          nextAllocation = Math.min(requestedAllocation, currentAllocation + remainingPoints);
+        }
+
+        updatedRows = rows.map((row, index) => index === rowIndex
+          ? { ...row, thief: formatPercentValue(nextAllocation) }
+          : row);
+      }
+
+      const thievingSkills = recalculateThievingSkills(
+        updatedRows,
+        currentSheet.race,
+        currentSheet.abilityDetails.Dexterity,
+        characterClass,
+      );
+
       return {
         ...currentSheet,
-        thievingSkills: recalculateThievingSkills(
-          updatedRows,
-          currentSheet.race,
-          currentSheet.abilityDetails.Dexterity,
-          characterClass,
-        ),
+        proficiencyDetails: {
+          ...currentSheet.proficiencyDetails,
+          'Thieving Skill Points': getThievingPointsToSpend(characterClass, level, thievingSkills),
+        },
+        thievingSkills,
       };
     });
   };
@@ -1805,9 +1853,12 @@ export default function CharacterSheetPage() {
                       {THIEVING_SKILL_COLUMNS.map(([field]) => (
                         <input
                           key={`${row.id}-${field}`}
-                          value={row[field]}
+                          value={field === 'realPercent' ? String(parsePercentValue(row.realPercent)) : row[field]}
+                          type={field === 'realPercent' ? 'number' : undefined}
+                          min={field === 'realPercent' ? 0 : undefined}
+                          max={field === 'realPercent' ? 95 : undefined}
                           onChange={updateThievingSkillRow(rowIndex, field)}
-                          readOnly={field === 'dex' || field === 'realPercent'}
+                          readOnly={field === 'dex' || (field === 'realPercent' && getThievingSkillPool(characterClass, parseLevelTitle(sheet.levelTitle || characterLevel)) === null)}
                           style={field === 'skill' ? styles.tableInput : styles.centeredTableInput}
                         />
                       ))}
@@ -1893,7 +1944,7 @@ export default function CharacterSheetPage() {
               <div style={styles.sheetSection}>
                 <div style={styles.weaponHeader}>
                   <h3 style={styles.sheetSectionTitle}>Other Equipment</h3>
-                  <button type="button" onClick={() => addEquipmentBucketLine('Other')} style={styles.smallActionButton}>Add item</button>
+                  <button type="button" onClick={() => addEquipmentBucketLine('Other')} style={styles.smallActionButton}>Add Row</button>
                 </div>
                 <div style={{ ...styles.equipmentList, ...(isTabletViewport ? { columns: '2 220px' } : {}) }}>
                   {getEquipmentBucketLines('Other').map((item, index) => (
@@ -1917,7 +1968,7 @@ export default function CharacterSheetPage() {
                   <div key={field} style={styles.sheetSection}>
                     <div style={styles.weaponHeader}>
                       <h3 style={styles.sheetSectionTitle}>{field === 'Magical' ? 'Magical Items' : field}</h3>
-                      <button type="button" onClick={() => addEquipmentBucketLine(field)} style={styles.smallActionButton}>Add item</button>
+                      <button type="button" onClick={() => addEquipmentBucketLine(field)} style={styles.smallActionButton}>Add Row</button>
                     </div>
                     <div style={{ ...styles.equipmentList, ...(isTabletViewport ? { columns: '2 220px' } : {}) }}>
                       {getEquipmentBucketLines(field).map((item, index) => (

@@ -137,12 +137,14 @@ const getCalculatedCharacterResources = (character: Character): CharacterResourc
   const runtime = getCachedRuntimeState(normalizedCharacter.id);
   const sheet = getCharacterSheet(normalizedCharacter.id);
   const level = parseLevelTitle(sheet.levelTitle || String(normalizedCharacter.level || 1));
-  const maxMagicPoints = calculateSheetMagicPoints(
+  const calculatedMaxMagicPoints = calculateSheetMagicPoints(
     normalizedCharacter.characterClass || normalizedCharacter.class || '',
     level,
     sheet,
   );
+  const maxMagicPoints = parseResourceNumber(sheet.combatDetails.MP) ?? calculatedMaxMagicPoints;
   const hitPointValues = getSheetHitPointValues(normalizedCharacter.id, normalizedCharacter);
+  const maxHitPoints = runtime?.maxHp || hitPointValues.maxHitPoints;
   const currentMagicPoints = runtime
     ? runtime.currentMp
     : normalizedCharacter.magicPoints ?? maxMagicPoints;
@@ -153,8 +155,8 @@ const getCalculatedCharacterResources = (character: Character): CharacterResourc
   return {
     magicPoints: Math.min(Math.max(0, currentMagicPoints), maxMagicPoints),
     maxMagicPoints,
-    hitPoints: Math.min(Math.max(0, currentHitPoints), hitPointValues.maxHitPoints),
-    maxHitPoints: hitPointValues.maxHitPoints,
+    hitPoints: Math.min(Math.max(0, currentHitPoints), maxHitPoints),
+    maxHitPoints,
   };
 };
 
@@ -201,6 +203,7 @@ const updateRuntimeState = async (character: Character, resources: CharacterReso
 
 export const clearSessionCharacterState = () => {
   writeSelectedCharacterId(null);
+  selectedCharacterCache = null;
   clearCharacterDataCache();
   emitCharacterChange();
   emitSpellbookChange();
@@ -357,11 +360,12 @@ const mergeCharacterWithRuntime = (character: Character): Character => {
   const runtime = getCachedRuntimeState(normalizedCharacter.id);
   const sheet = getCharacterSheet(normalizedCharacter.id);
   const level = parseLevelTitle(sheet.levelTitle || String(normalizedCharacter.level || 1));
-  const sheetMagicPoints = calculateSheetMagicPoints(
+  const calculatedMagicPoints = calculateSheetMagicPoints(
     normalizedCharacter.characterClass || normalizedCharacter.class || '',
     level,
     sheet,
   );
+  const sheetMagicPoints = parseResourceNumber(sheet.combatDetails.MP) ?? calculatedMagicPoints;
 
   if (!runtime) {
     const maxMagicPoints = sheetMagicPoints;
@@ -387,9 +391,15 @@ const mergeCharacterWithRuntime = (character: Character): Character => {
   };
 };
 
-export const syncMagicPointsFromSheet = async (characterId: number, characterClass: string, level: number) => {
+export const syncMagicPointsFromSheet = async (
+  characterId: number,
+  characterClass: string,
+  level: number,
+  refillToSheetValue = false,
+) => {
   const sheet = getCharacterSheet(characterId);
-  const maxMagicPoints = calculateSheetMagicPoints(characterClass, level, sheet);
+  const calculatedMaxMagicPoints = calculateSheetMagicPoints(characterClass, level, sheet);
+  const maxMagicPoints = parseResourceNumber(sheet.combatDetails.MP) ?? calculatedMaxMagicPoints;
   const hitPointValues = getSheetHitPointValues(characterId);
   const runtime = getCachedRuntimeState(characterId);
   const current = runtime
@@ -401,7 +411,7 @@ export const syncMagicPointsFromSheet = async (characterId: number, characterCla
       }
     : hitPointValues;
 
-  const currentMagicPoints = runtime ? runtime.currentMp : maxMagicPoints;
+  const currentMagicPoints = refillToSheetValue || !runtime ? maxMagicPoints : runtime.currentMp;
   const nextCurrentMagicPoints = Math.min(Math.max(0, currentMagicPoints), maxMagicPoints);
   const currentHitPoints = runtime ? runtime.currentHp : hitPointValues.hitPoints;
   const next = {
@@ -412,6 +422,11 @@ export const syncMagicPointsFromSheet = async (characterId: number, characterCla
   };
 
   await updateRuntimeState({ id: characterId, name: '', class: characterClass }, next);
+
+  if (selectedCharacterCache?.id === characterId) {
+    selectedCharacterCache = mergeCharacterWithRuntime(selectedCharacterCache);
+  }
+
   emitCharacterChange();
 };
 
@@ -428,9 +443,10 @@ const withSelectedCharacterUpdate = async (
   const next = updater(character, current);
 
   await updateRuntimeState(character, next);
-  selectedCharacterCache = mergeCharacterWithRuntime(character);
+  const merged = mergeCharacterWithRuntime(character);
+  selectedCharacterCache = merged;
   emitCharacterChange();
-  return selectedCharacterCache;
+  return merged;
 };
 
 export const addMagicPoints = (amount: number) => {
@@ -583,11 +599,53 @@ export const removeSpellFromSelectedSpellbook = (spellId: number) => {
   return true;
 };
 
+const refreshSelectedCharacterFromCache = () => {
+  const selectedId = readSelectedCharacterId();
+
+  if (!selectedId) {
+    selectedCharacterCache = null;
+    return null;
+  }
+
+  const snapshot = getSelectedCharacterSnapshot();
+
+  if (!snapshot || snapshot.id !== selectedId) {
+    return null;
+  }
+
+  const merged = mergeCharacterWithRuntime(snapshot);
+  selectedCharacterCache = merged;
+  return merged;
+};
+
+const loadSelectedCharacterFromFirestore = async () => {
+  const selectedId = readSelectedCharacterId();
+
+  if (!selectedId) {
+    selectedCharacterCache = null;
+    return null;
+  }
+
+  await preloadCharacterData(selectedId);
+  const characters = await getCharacters().catch(() => []);
+  const match = characters.find((item) => item.id === selectedId);
+
+  if (!match) {
+    writeSelectedCharacterId(null);
+    selectedCharacterCache = null;
+    return null;
+  }
+
+  const merged = mergeCharacterWithRuntime(match);
+  selectedCharacterCache = merged;
+  return merged;
+};
+
 export const useSelectedCharacter = () => {
   const [character, setCharacter] = useState<Character | null>(null);
 
   useEffect(() => {
-    const syncCharacter = async () => {
+    const syncFromCache = () => {
       const selectedId = readSelectedCharacterId();
 
       if (!selectedId) {
@@ -595,19 +653,28 @@ export const useSelectedCharacter = () => {
         return;
       }
 
-      await preloadCharacterData(selectedId);
-      const characters = await getCharacters().catch(() => []);
-      const match = characters.find((item) => item.id === selectedId);
-      setCharacter(match ? mergeCharacterWithRuntime(match) : null);
+      const merged = refreshSelectedCharacterFromCache();
+      if (merged) {
+        setCharacter(merged);
+      }
     };
 
-    syncCharacter();
-    window.addEventListener(CHANGE_EVENT, syncCharacter);
-    window.addEventListener('storage', syncCharacter);
+    const syncFromFirestore = async () => {
+      const merged = await loadSelectedCharacterFromFirestore();
+      setCharacter(merged);
+    };
+
+    const handleStorage = () => {
+      void syncFromFirestore();
+    };
+
+    void syncFromFirestore();
+    window.addEventListener(CHANGE_EVENT, syncFromCache);
+    window.addEventListener('storage', handleStorage);
 
     return () => {
-      window.removeEventListener(CHANGE_EVENT, syncCharacter);
-      window.removeEventListener('storage', syncCharacter);
+      window.removeEventListener(CHANGE_EVENT, syncFromCache);
+      window.removeEventListener('storage', handleStorage);
     };
   }, []);
 

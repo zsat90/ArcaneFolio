@@ -43,7 +43,7 @@ export class AuthService {
 
     async register(registerDto: RegisterDto){
         try{
-            const email = registerDto.email.toLowerCase()
+            const email = registerDto.email.trim().toLowerCase()
             // check to see if user already exists
             const existingUser = await this.usersService.findByEmail(email)
             if(existingUser){
@@ -54,11 +54,14 @@ export class AuthService {
             //Hash password before storing
             const hashedPassword = await argon2.hash(registerDto.password)
             
-            await this.usersService.createUser({...registerDto, password: hashedPassword});
+            await this.usersService.createUser({ ...registerDto, email, password: hashedPassword });
 
-            return this.login({email: registerDto.email, password: registerDto.password})
+            return this.login({ email, password: registerDto.password });
 
         }catch(err){
+            if (err instanceof ConflictException) {
+                throw err;
+            }
             throw new InternalServerErrorException(err)
         }
     }
