@@ -10,6 +10,7 @@ import {
   generateProgressionSpellbook,
   generateRandomSpellbook,
   getCumulativeProgression,
+  getSpellsForGeneratorClass,
 } from '../../utils/spells/randomSpellbook';
 
 const GENERATOR_CLASSES: GeneratorClass[] = ['Wizard', 'Runeist', 'Bard', 'Priest'];
@@ -22,6 +23,7 @@ export default function RandomSpellGeneratorPage() {
   const [mode, setMode] = useState<GeneratorMode>('progression');
   const [casterLevel, setCasterLevel] = useState('1');
   const [randomCount, setRandomCount] = useState('10');
+  const [randomMaxLevel, setRandomMaxLevel] = useState('');
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -54,6 +56,18 @@ export default function RandomSpellGeneratorPage() {
   const progressionTotals = useMemo(() => {
     return getCumulativeProgression(generatorClass, Number(casterLevel) || 1);
   }, [casterLevel, generatorClass]);
+
+  const maxAvailableSpellLevel = useMemo(() => {
+    const availableSpells = getSpellsForGeneratorClass(spells, generatorClass)
+      .filter((spell) => spell.level >= 1 && spell.level <= 10);
+
+    return Math.max(1, ...availableSpells.map((spell) => spell.level));
+  }, [generatorClass, spells]);
+
+  const selectedMaxSpellLevel = Math.min(
+    Number(randomMaxLevel) || maxAvailableSpellLevel,
+    maxAvailableSpellLevel,
+  );
 
   const groupedGeneratedSpells = useMemo(() => {
     return generatedSpells.reduce<Record<number, Spell[]>>((groups, spell) => {
@@ -88,7 +102,7 @@ export default function RandomSpellGeneratorPage() {
 
     const count = Math.max(1, Number(randomCount) || 1);
     setRandomCount(String(count));
-    setGeneratedSpells(generateRandomSpellbook(spells, count, generatorClass));
+    setGeneratedSpells(generateRandomSpellbook(spells, count, generatorClass, selectedMaxSpellLevel));
   };
 
   const handleAddSpell = (spell: Spell) => {
@@ -177,6 +191,20 @@ export default function RandomSpellGeneratorPage() {
                 />
               </label>
             ) : (
+              <>
+                <label style={styles.field}>
+                  <span style={styles.label}>Maximum Spell Level</span>
+                  <select
+                    value={selectedMaxSpellLevel}
+                    onChange={(event) => setRandomMaxLevel(event.target.value)}
+                    style={styles.control}
+                    disabled={isLoading}
+                  >
+                    {Array.from({ length: maxAvailableSpellLevel }, (_, index) => index + 1).map((level) => (
+                      <option key={level} value={level}>Up to Level {level}</option>
+                    ))}
+                  </select>
+                </label>
               <label style={styles.field}>
                 <span style={styles.label}>Number of Spells</span>
                 <input
@@ -187,6 +215,7 @@ export default function RandomSpellGeneratorPage() {
                   style={styles.control}
                 />
               </label>
+              </>
             )}
 
             <button type="button" onClick={handleGenerate} style={styles.generateButton} disabled={isLoading}>

@@ -142,9 +142,14 @@ export const generateProgressionSpellbook = (
   });
 };
 
-export const generateRandomSpellbook = (spells: Spell[], count: number, generatorClass: GeneratorClass) => {
+export const generateRandomSpellbook = (
+  spells: Spell[],
+  count: number,
+  generatorClass: GeneratorClass,
+  maxSpellLevel = 10,
+) => {
   const availableSpells = getSpellsForGeneratorClass(spells, generatorClass)
-    .filter((spell) => spell.level >= 1 && spell.level <= 10);
+    .filter((spell) => spell.level >= 1 && spell.level <= Math.min(10, maxSpellLevel));
 
   return shuffle(availableSpells).slice(0, Math.max(0, count));
 };
